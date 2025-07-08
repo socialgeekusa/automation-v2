@@ -1,11 +1,23 @@
 import subprocess
 import threading
 import time
+import os
+import logging
 
 class AppiumDriver:
     def __init__(self):
         self.devices = []
         self.lock = threading.Lock()
+        self.sessions = {}
+        log_dir = "Logs"
+        os.makedirs(log_dir, exist_ok=True)
+        self.logger = logging.getLogger("automation")
+        if not self.logger.handlers:
+            self.logger.setLevel(logging.INFO)
+            handler = logging.FileHandler(os.path.join(log_dir, "automation_log.txt"))
+            formatter = logging.Formatter("%(asctime)s: %(levelname)s: %(message)s")
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
 
     def list_devices(self):
         """
@@ -35,32 +47,154 @@ class AppiumDriver:
         return devices
 
     def start_session(self, device_id, platform):
-        """
-        Placeholder: Start an Appium session for the given device and platform.
-        Platform should be 'android' or 'ios'.
-        """
-        pass
+        """Start a simple session using adb or idevice commands."""
+        platform = platform.lower()
+        try:
+            if platform == "android":
+                subprocess.check_output([
+                    "adb",
+                    "-s",
+                    device_id,
+                    "wait-for-device",
+                ])
+            elif platform == "ios":
+                subprocess.check_output([
+                    "ideviceinfo",
+                    "-u",
+                    device_id,
+                ])
+            else:
+                raise ValueError("Unknown platform")
+            self.sessions[device_id] = platform
+            self.logger.info(f"SUCCESS start_session {platform} {device_id}")
+            return True
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"FAIL start_session {platform} {device_id}: {e.output.decode().strip()}"
+            )
+        except Exception as e:
+            self.logger.error(f"FAIL start_session {platform} {device_id}: {e}")
+        return False
 
     def stop_session(self, device_id):
-        """
-        Placeholder: Stop the Appium session for the given device.
-        """
-        pass
+        """Stop a session by issuing basic device commands."""
+        platform = self.sessions.get(device_id)
+        if not platform:
+            self.logger.warning(f"stop_session: no session for {device_id}")
+            return False
+        try:
+            if platform == "android":
+                subprocess.check_output(
+                    ["adb", "-s", device_id, "shell", "input", "keyevent", "3"]
+                )
+            else:
+                subprocess.check_output(
+                    ["idevicediagnostics", "restart", "-u", device_id]
+                )
+            self.sessions.pop(device_id, None)
+            self.logger.info(f"SUCCESS stop_session {platform} {device_id}")
+            return True
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"FAIL stop_session {platform} {device_id}: {e.output.decode().strip()}"
+            )
+        except Exception as e:
+            self.logger.error(f"FAIL stop_session {platform} {device_id}: {e}")
+        return False
 
     def send_touch(self, device_id, x, y):
-        """
-        Placeholder: Send a touch event at (x, y) on the device.
-        """
-        pass
+        """Send a simple touch event via adb/idevice."""
+        platform = self.sessions.get(device_id, "android")
+        try:
+            if platform == "android":
+                subprocess.check_output(
+                    ["adb", "-s", device_id, "shell", "input", "tap", str(x), str(y)]
+                )
+            else:
+                subprocess.check_output(
+                    [
+                        "idevicedebug",
+                        "-u",
+                        device_id,
+                        "tap",
+                        str(x),
+                        str(y),
+                    ]
+                )
+            self.logger.info(f"SUCCESS touch {device_id} {x},{y}")
+            return True
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"FAIL touch {device_id} {x},{y}: {e.output.decode().strip()}"
+            )
+        except Exception as e:
+            self.logger.error(f"FAIL touch {device_id} {x},{y}: {e}")
+        return False
 
     def send_key(self, device_id, key_code):
-        """
-        Placeholder: Send a key event (e.g., KEYCODE_ENTER) on the device.
-        """
-        pass
+        """Send a key event via adb/idevice."""
+        platform = self.sessions.get(device_id, "android")
+        try:
+            if platform == "android":
+                subprocess.check_output(
+                    ["adb", "-s", device_id, "shell", "input", "keyevent", str(key_code)]
+                )
+            else:
+                subprocess.check_output(
+                    ["idevicedebug", "-u", device_id, "key", str(key_code)]
+                )
+            self.logger.info(f"SUCCESS key {device_id} {key_code}")
+            return True
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"FAIL key {device_id} {key_code}: {e.output.decode().strip()}"
+            )
+        except Exception as e:
+            self.logger.error(f"FAIL key {device_id} {key_code}: {e}")
+        return False
 
     def swipe(self, device_id, start_x, start_y, end_x, end_y, duration_ms):
-        """
-        Placeholder: Perform a swipe gesture.
-        """
-        pass
+        """Perform a swipe gesture via adb/idevice."""
+        platform = self.sessions.get(device_id, "android")
+        try:
+            if platform == "android":
+                subprocess.check_output(
+                    [
+                        "adb",
+                        "-s",
+                        device_id,
+                        "shell",
+                        "input",
+                        "swipe",
+                        str(start_x),
+                        str(start_y),
+                        str(end_x),
+                        str(end_y),
+                        str(duration_ms),
+                    ]
+                )
+            else:
+                subprocess.check_output(
+                    [
+                        "idevicedebug",
+                        "-u",
+                        device_id,
+                        "swipe",
+                        str(start_x),
+                        str(start_y),
+                        str(end_x),
+                        str(end_y),
+                        str(duration_ms),
+                    ]
+                )
+            self.logger.info(
+                f"SUCCESS swipe {device_id} {start_x},{start_y}->{end_x},{end_y} in {duration_ms}ms"
+            )
+            return True
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"FAIL swipe {device_id}: {e.output.decode().strip()}"
+            )
+        except Exception as e:
+            self.logger.error(f"FAIL swipe {device_id}: {e}")
+        return False
