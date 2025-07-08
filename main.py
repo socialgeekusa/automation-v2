@@ -4,13 +4,29 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout, QMessageBox, QInputDialog
 )
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, QThread, QObject, pyqtSignal
 from config_manager import ConfigManager
 from appium_driver import AppiumDriver
 from warmup_manager import WarmupManager
 from post_manager import PostManager
 from interaction_manager import InteractionManager
 from session_summary import SessionSummary
+
+
+class AutomationWorker(QObject):
+    finished = pyqtSignal()
+
+    def __init__(self, post_manager, interaction_manager):
+        super().__init__()
+        self.post_manager = post_manager
+        self.interaction_manager = interaction_manager
+
+    def run(self):
+        self.post_manager.run()
+        self.interaction_manager.run()
+        self.post_manager.join()
+        self.interaction_manager.join()
+        self.finished.emit()
 
 class AutomationGUI(QMainWindow):
     def __init__(self):
@@ -164,8 +180,17 @@ class AutomationGUI(QMainWindow):
         self.tabs.addTab(tab, "Start")
 
     def run_automation(self):
-        self.post_manager.run()
-        self.interaction_manager.run()
+        self.thread = QThread()
+        self.worker = AutomationWorker(self.post_manager, self.interaction_manager)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.session_complete)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
+    def session_complete(self):
         self.session_summary.show_summary()
         QMessageBox.information(self, "Session Complete", "Automation completed successfully.")
 

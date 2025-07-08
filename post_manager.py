@@ -22,6 +22,10 @@ class PostManager:
         if self.thread and self.thread.is_alive():
             self.thread.join()
 
+    def join(self, timeout=None):
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout)
+
     def _post_loop(self):
         while self.active:
             for device_id in self.config.accounts:

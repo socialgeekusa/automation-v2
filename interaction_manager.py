@@ -22,6 +22,10 @@ class InteractionManager:
         if self.thread and self.thread.is_alive():
             self.thread.join()
 
+    def join(self, timeout=None):
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout)
+
     def _interaction_loop(self):
         while self.active:
             for device_id, details in self.config.accounts.items():
