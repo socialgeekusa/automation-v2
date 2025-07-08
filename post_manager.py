@@ -30,6 +30,15 @@ class PostManager:
     def resume(self):
         self.paused = False
 
+    def _calculate_delay(self):
+        """Calculate sleep delay between posts respecting fast mode."""
+        min_delay = self.config.settings.get("min_delay", 5)
+        max_delay = self.config.settings.get("max_delay", 15)
+        factor = 0.2 if self.config.settings.get("fast_mode") else 1.0
+        min_delay *= 60 * factor
+        max_delay *= 60 * factor
+        return random.uniform(min_delay, max_delay)
+
     def _post_loop(self):
         log_path = os.path.join("Logs", "post_log.txt")
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -43,7 +52,7 @@ class PostManager:
                     active_account = accounts.get("active")
                     if active_account:
                         self.post_draft(device_id, platform, active_account)
-                        delay = random.uniform(300, 900)
+                        delay = self._calculate_delay()
                         time.sleep(delay)
             time.sleep(10)
 
