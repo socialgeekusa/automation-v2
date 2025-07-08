@@ -1,5 +1,7 @@
 import json
 import os
+from typing import Dict, Optional
+import utils
 
 class ConfigManager:
     def __init__(self):
@@ -11,6 +13,7 @@ class ConfigManager:
         self.accounts_file = os.path.join(self.config_folder, "accounts.json")
         self.settings_file = os.path.join(self.config_folder, "settings.json")
         self.account_settings_file = os.path.join(self.config_folder, "account_settings.json")
+        self.state_file = os.path.join(self.config_folder, "device_state.json")
 
         self.devices_data = self.load_json(self.devices_file, default={"devices": []})
         if isinstance(self.devices_data, dict) and "devices" in self.devices_data:
@@ -33,6 +36,7 @@ class ConfigManager:
                 "Instagram": {"likes": [30,50], "follows": [10,15], "comments": [5,8], "shares": [3,5], "story_views": [100,200], "story_likes": [10,20], "posts": [0,1]}
             }
         })
+        self.device_states: Dict[str, Dict] = self.load_json(self.state_file, default={})
         for dev in self.devices_info:
             dev["accounts"] = self._get_account_count(dev["id"])
         self._save_devices_info()
@@ -58,6 +62,9 @@ class ConfigManager:
     def _save_devices_info(self):
         self.save_json(self.devices_file, {"devices": self.devices_info})
 
+    def _save_states(self):
+        self.save_json(self.state_file, self.device_states)
+
     def _get_account_count(self, device_id):
         count = 0
         if device_id in self.accounts:
@@ -65,12 +72,35 @@ class ConfigManager:
                 count += len(platform_data.get("accounts", []))
         return count
 
+    def get_account_counts(self, device_id) -> Dict[str, int]:
+        return {
+            "TikTok": len(self.accounts.get(device_id, {}).get("TikTok", {}).get("accounts", [])),
+            "Instagram": len(self.accounts.get(device_id, {}).get("Instagram", {}).get("accounts", [])),
+        }
+
     def update_device_accounts(self, device_id):
         for dev in self.devices_info:
             if dev["id"] == device_id:
                 dev["accounts"] = self._get_account_count(device_id)
                 self._save_devices_info()
                 break
+
+    def set_device_status(self, device_id: str, status: str):
+        state = self.device_states.setdefault(device_id, {})
+        state["status"] = status
+        self._save_states()
+
+    def get_device_status(self, device_id: str) -> str:
+        return self.device_states.get(device_id, {}).get("status", "Offline")
+
+    def update_last_activity(self, device_id: str, platform: str):
+        state = self.device_states.setdefault(device_id, {})
+        last = state.setdefault("last_activity", {})
+        last[platform] = utils.timestamp_now()
+        self._save_states()
+
+    def get_last_activity(self, device_id: str, platform: str) -> Optional[float]:
+        return self.device_states.get(device_id, {}).get("last_activity", {}).get(platform)
 
     def save_device_name(self, device_id, new_name):
         self.devices[device_id] = new_name
@@ -94,13 +124,16 @@ class ConfigManager:
             self.devices[device_id] = name
             self.devices_info.append({"id": device_id, "name": name, "accounts": self._get_account_count(device_id)})
             self._save_devices_info()
+            self.set_device_status(device_id, "Idle")
 
     def remove_device(self, device_id):
         if device_id in self.devices:
             del self.devices[device_id]
             self.devices_info = [d for d in self.devices_info if d["id"] != device_id]
             self._save_devices_info()
-
+        if device_id in self.device_states:
+            del self.device_states[device_id]
+            self._save_states()
     def update_nickname(self, device_id, nickname):
         self.save_device_name(device_id, nickname)
 
