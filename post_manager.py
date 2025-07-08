@@ -2,6 +2,7 @@ import threading
 import time
 import random
 import os
+from logger import log as log_device
 
 class PostManager:
     def __init__(self, driver, config):
@@ -53,7 +54,11 @@ class PostManager:
             # Placeholder for draft posting logic
             print(f"Posting draft on {platform} account {account} for device {device_id}")
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: SUCCESS post {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: SUCCESS post {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"SUCCESS post {platform} {account}")
         except Exception as e:
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: FAIL post {platform} {account} on {device_id}: {e}\n")
+                log_line = f"{time.asctime()}: {device_id}: FAIL post {platform} {account}: {e}\n"
+                log.write(log_line)
+            log_device(device_id, f"FAIL post {platform} {account}: {e}")

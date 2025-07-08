@@ -3,7 +3,7 @@ import os
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout,
-    QMessageBox, QInputDialog
+    QMessageBox, QInputDialog, QComboBox, QCheckBox
 )
 from PyQt5.QtCore import QTimer
 from config_manager import ConfigManager
@@ -154,9 +154,22 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("📜 Automation Logs:"))
 
+        self.device_filter = QComboBox()
+        self.device_filter.addItem("All Devices", None)
+        for dev in self.config.devices:
+            nickname = self.config.devices.get(dev, dev)
+            self.device_filter.addItem(f"{nickname} ({dev})", dev)
+        self.device_filter.currentIndexChanged.connect(self.load_logs)
+        layout.addWidget(self.device_filter)
+
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
         layout.addWidget(self.log_view)
+
+        self.auto_refresh_cb = QCheckBox("Auto Refresh")
+        self.auto_refresh_cb.setChecked(True)
+        self.auto_refresh_cb.stateChanged.connect(self.toggle_log_timer)
+        layout.addWidget(self.auto_refresh_cb)
 
         refresh_btn = QPushButton("Refresh Logs")
         refresh_btn.clicked.connect(self.load_logs)
@@ -177,15 +190,30 @@ class AutomationGUI(QMainWindow):
             return
 
         lines = []
+        selected_device = self.device_filter.currentData()
         with open(log_file, "r") as f:
             for line in f:
+                try:
+                    _, rest = line.split(": ", 1)
+                    device_id, msg = rest.split(": ", 1)
+                except ValueError:
+                    device_id, msg = None, line
+                if selected_device and device_id != selected_device:
+                    continue
                 color = "gray"
-                if "SUCCESS" in line:
+                if "SUCCESS" in msg:
                     color = "green"
-                elif "FAIL" in line:
+                elif "FAIL" in msg:
                     color = "red"
-                lines.append(f'<span style="color:{color}">{line.strip()}</span>')
+                lines.append(f'<span style="color:{color}">{device_id}: {msg.strip()}</span>')
         self.log_view.setHtml("<br>".join(lines))
+
+    def toggle_log_timer(self):
+        if self.auto_refresh_cb.isChecked():
+            if not self.log_timer.isActive():
+                self.log_timer.start(5000)
+        else:
+            self.log_timer.stop()
 
     def start_tab(self):
         tab = QWidget()

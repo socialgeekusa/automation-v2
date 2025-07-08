@@ -3,6 +3,7 @@ import threading
 import time
 import json
 import random
+from logger import log as log_device
 
 class WarmupManager:
     def __init__(self, driver, config):
@@ -97,7 +98,9 @@ class WarmupManager:
             print(f"Warmup like on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup LIKE {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: Warmup LIKE {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"Warmup LIKE {platform} {account}")
 
         # Follows
         follow_min, follow_max = limits.get("follows", [0, 0])
@@ -105,7 +108,9 @@ class WarmupManager:
             print(f"Warmup follow on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup FOLLOW {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: Warmup FOLLOW {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"Warmup FOLLOW {platform} {account}")
 
         # Comments
         comment_min, comment_max = limits.get("comments", [0, 0])
@@ -113,7 +118,9 @@ class WarmupManager:
             print(f"Warmup comment on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup COMMENT {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: Warmup COMMENT {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"Warmup COMMENT {platform} {account}")
 
         # Shares
         share_min, share_max = limits.get("shares", [0, 0])
@@ -121,7 +128,9 @@ class WarmupManager:
             print(f"Warmup share on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup SHARE {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: Warmup SHARE {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"Warmup SHARE {platform} {account}")
 
         # Story Views
         view_min, view_max = limits.get("story_views", [0, 0])
@@ -129,7 +138,9 @@ class WarmupManager:
             print(f"Warmup story view on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup STORY_VIEW {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: Warmup STORY_VIEW {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"Warmup STORY_VIEW {platform} {account}")
 
         # Story Likes
         like_story_min, like_story_max = limits.get("story_likes", [0, 0])
@@ -137,7 +148,9 @@ class WarmupManager:
             print(f"Warmup story like on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup STORY_LIKE {platform} {account} on {device_id}\n")
+                log_line = f"{time.asctime()}: {device_id}: Warmup STORY_LIKE {platform} {account}\n"
+                log.write(log_line)
+            log_device(device_id, f"Warmup STORY_LIKE {platform} {account}")
 
         # Posts (if warmup day threshold reached)
         post_min, post_max = limits.get("posts", [0, 0])

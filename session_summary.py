@@ -18,15 +18,23 @@ class SessionSummary:
                     line = line.strip()
                     if not line:
                         continue
-                    key = re.split(r':', line, 1)[0]
-                    actions[key] = actions.get(key, 0) + 1
+                    try:
+                        _, rest = line.split(": ", 1)
+                        device_id, _ = rest.split(": ", 1)
+                    except ValueError:
+                        continue
+                    actions[device_id] = actions.get(device_id, 0) + 1
 
         if os.path.exists(self.post_log):
             with open(self.post_log, "r") as f:
                 for line in f:
                     if "SUCCESS" in line:
-                        key = line.split()[2]
-                        actions[key] = actions.get(key, 0) + 1
+                        try:
+                            _, rest = line.split(": ", 1)
+                            device_id, _ = rest.split(": ", 1)
+                        except ValueError:
+                            continue
+                        actions[device_id] = actions.get(device_id, 0) + 1
 
         if actions:
             parts = [f"{key}: {count} actions" for key, count in actions.items()]
