@@ -30,10 +30,14 @@ class PostManager:
     def resume(self):
         self.paused = False
 
-    def _calculate_delay(self):
-        """Calculate sleep delay between posts respecting fast mode."""
+    def _calculate_delay(self, account=None):
+        """Calculate sleep delay between posts respecting fast mode and account overrides."""
         min_delay = self.config.settings.get("min_delay", 5)
         max_delay = self.config.settings.get("max_delay", 15)
+        if account:
+            overrides = self.config.get_account_settings(account)
+            min_delay = overrides.get("min_delay", min_delay)
+            max_delay = overrides.get("max_delay", max_delay)
         factor = 0.2 if self.config.settings.get("fast_mode") else 1.0
         min_delay *= 60 * factor
         max_delay *= 60 * factor
@@ -52,7 +56,7 @@ class PostManager:
                     active_account = accounts.get("active")
                     if active_account:
                         self.post_draft(device_id, platform, active_account)
-                        delay = self._calculate_delay()
+                        delay = self._calculate_delay(active_account)
                         time.sleep(delay)
             time.sleep(10)
 
@@ -61,6 +65,13 @@ class PostManager:
         log_path = os.path.join(log_dir, "post_log.txt")
         automation_log = os.path.join(log_dir, "automation_log.txt")
         os.makedirs(log_dir, exist_ok=True)
+
+        if not self.driver.verify_current_account(device_id, platform, account):
+            warning = f"[{device_id}] {time.asctime()}: WARNING account mismatch for {platform} {account} on {device_id}\n"
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(warning)
+            print(warning.strip())
+            return
         try:
             # Placeholder for draft posting logic
             print(f"Posting draft on {platform} account {account} for device {device_id}")

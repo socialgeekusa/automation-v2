@@ -101,6 +101,17 @@ class WarmupManager:
         automation_log = os.path.join(log_dir, "automation_log.txt")
         os.makedirs(log_dir, exist_ok=True)
 
+        if not self.driver.verify_current_account(device_id, platform, account):
+            warning = f"[{device_id}] {time.asctime()}: WARNING account mismatch for {platform} {account} on {device_id}\n"
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(warning)
+            print(warning.strip())
+            return
+
+        account_settings = self.config.get_account_settings(account)
+        min_delay = account_settings.get("min_delay", min_delay)
+        max_delay = account_settings.get("max_delay", max_delay)
+
         def append_logs(message: str):
             with open(log_path, "a") as log:
                 log.write(message)

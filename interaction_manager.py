@@ -65,6 +65,17 @@ class InteractionManager:
         log_path = os.path.join(log_dir, "automation_log.txt")
         os.makedirs(log_dir, exist_ok=True)
 
+        if not self.driver.verify_current_account(device_id, platform, account):
+            warning = f"[{device_id}] {time.asctime()}: WARNING account mismatch for {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log:
+                log.write(warning)
+            print(warning.strip())
+            return
+
+        settings_override = self.config.get_account_settings(account)
+        min_delay = settings_override.get("min_delay", self.config.settings.get("min_delay", 5))
+        max_delay = settings_override.get("max_delay", self.config.settings.get("max_delay", 15))
+
         # choose a random subset of actions each loop
         for action in random.sample(actions, k=random.randint(1, 4)):
             print(f"Performing {action} on {platform} account {account} for device {device_id}")
@@ -72,9 +83,4 @@ class InteractionManager:
             with open(log_path, "a") as log:
                 log.write(line)
             # here you’d call the driver’s methods, e.g. self.driver.swipe(...)
-            time.sleep(
-                random.uniform(
-                    self.config.settings.get("min_delay", 5),
-                    self.config.settings.get("max_delay", 15)
-                )
-            )
+            time.sleep(random.uniform(min_delay, max_delay))

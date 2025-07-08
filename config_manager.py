@@ -10,9 +10,11 @@ class ConfigManager:
         self.devices_file = os.path.join(self.config_folder, "devices.json")
         self.accounts_file = os.path.join(self.config_folder, "accounts.json")
         self.settings_file = os.path.join(self.config_folder, "settings.json")
+        self.account_settings_file = os.path.join(self.config_folder, "account_settings.json")
 
         self.devices = self.load_json(self.devices_file, default={})
         self.accounts = self.load_json(self.accounts_file, default={})
+        self.account_settings = self.load_json(self.account_settings_file, default={})
         self.settings = self.load_json(self.settings_file, default={
             "fast_mode": False,
             "min_delay": 5,
@@ -80,3 +82,11 @@ class ConfigManager:
             if account_name in self.accounts[device_id][platform]["accounts"]:
                 self.accounts[device_id][platform]["active"] = account_name
                 self.save_json(self.accounts_file, self.accounts)
+
+    def set_account_settings(self, username, settings):
+        """Store per-account interaction settings."""
+        self.account_settings[username] = settings
+        self.save_json(self.account_settings_file, self.account_settings)
+
+    def get_account_settings(self, username):
+        return self.account_settings.get(username, {})

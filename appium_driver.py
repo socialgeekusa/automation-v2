@@ -117,3 +117,23 @@ class AppiumDriver:
             )
         except Exception as e:
             logger.error(f"Failed to swipe on {device_id}: {e}")
+
+    def verify_current_account(self, device_id, platform, expected_username):
+        """Verify that the currently logged in account matches ``expected_username``.
+
+        This placeholder implementation would normally use Appium commands or
+        OCR to read the username from the profile page. It returns ``True`` if
+        the detected username matches ``expected_username``.
+        """
+        try:
+            logger.info(
+                f"Verifying account on {device_id} for platform {platform}"
+            )
+            # Placeholder for real verification logic
+            current_username = expected_username
+            return str(current_username).lower() == str(expected_username).lower()
+        except Exception as e:
+            logger.warning(
+                f"Account verification failed on {device_id} ({platform}): {e}"
+            )
+            return False
