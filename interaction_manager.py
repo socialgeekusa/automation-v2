@@ -8,6 +8,7 @@ class InteractionManager:
         self.config = config
         self.active = False
         self.thread = None
+        self.paused = False
 
     def run(self):
         if self.active:
@@ -22,8 +23,17 @@ class InteractionManager:
         if self.thread and self.thread.is_alive():
             self.thread.join()
 
+    def pause(self):
+        self.paused = True
+
+    def resume(self):
+        self.paused = False
+
     def _interaction_loop(self):
         while self.active:
+            if self.paused:
+                time.sleep(1)
+                continue
             for device_id, details in self.config.accounts.items():
                 for platform in ["TikTok", "Instagram"]:
                     platform_info = details.get(platform, {})
