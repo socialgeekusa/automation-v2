@@ -1,9 +1,10 @@
 import sys
 import os
+import re
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout,
-    QMessageBox, QInputDialog, QSpinBox
+    QMessageBox, QInputDialog, QSpinBox, QComboBox
 )
 from PyQt5.QtCore import QTimer
 from config_manager import ConfigManager
@@ -27,6 +28,7 @@ class AutomationGUI(QMainWindow):
         self.session_summary = SessionSummary()
         self.warmup_labels = {}
         self.warmup_timer = QTimer()
+        self.logs_by_device = {}
 
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
@@ -235,6 +237,10 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("📜 Automation Logs:"))
 
+        self.device_selector = QComboBox()
+        self.device_selector.currentIndexChanged.connect(self.update_log_view)
+        layout.addWidget(self.device_selector)
+
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
         layout.addWidget(self.log_view)
@@ -254,19 +260,58 @@ class AutomationGUI(QMainWindow):
     def load_logs(self):
         log_file = os.path.join("Logs", "automation_log.txt")
         if not os.path.exists(log_file):
+            self.logs_by_device = {}
+            self.device_selector.clear()
+            self.device_selector.addItem("All Devices", None)
             self.log_view.setText("No logs found.")
             return
 
-        lines = []
+        device_logs = {}
+        pattern = re.compile(r"on\s+([\w-]+)\b")
         with open(log_file, "r") as f:
-            for line in f:
-                color = "gray"
-                if "SUCCESS" in line:
-                    color = "green"
-                elif "FAIL" in line:
-                    color = "red"
-                lines.append(f'<span style="color:{color}">{line.strip()}</span>')
-        self.log_view.setHtml("<br>".join(lines))
+            for raw in f:
+                line = raw.strip()
+                match = pattern.search(line)
+                device = match.group(1) if match else "Unknown"
+                device_logs.setdefault(device, []).append(line)
+
+        self.logs_by_device = device_logs
+
+        current = self.device_selector.currentData()
+        self.device_selector.blockSignals(True)
+        self.device_selector.clear()
+        self.device_selector.addItem("All Devices", None)
+        for dev in sorted(device_logs.keys()):
+            self.device_selector.addItem(dev, dev)
+        self.device_selector.blockSignals(False)
+        if current in device_logs or current is None:
+            idx = self.device_selector.findData(current)
+            if idx != -1:
+                self.device_selector.setCurrentIndex(idx)
+        self.update_log_view()
+
+    def update_log_view(self):
+        device = self.device_selector.currentData()
+        lines = []
+        if device is None:
+            for dev_lines in self.logs_by_device.values():
+                lines.extend(dev_lines)
+        else:
+            lines = self.logs_by_device.get(device, [])
+
+        formatted = []
+        for line in lines:
+            color = "gray"
+            if "SUCCESS" in line:
+                color = "green"
+            elif "FAIL" in line or "ERROR" in line:
+                color = "red"
+            formatted.append(f'<span style="color:{color}">{line}</span>')
+
+        if formatted:
+            self.log_view.setHtml("<br>".join(formatted))
+        else:
+            self.log_view.setText("No logs for this device.")
 
     def start_tab(self):
         tab = QWidget()
