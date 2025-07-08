@@ -1,6 +1,16 @@
 import subprocess
 import threading
 import time
+import logging
+import os
+
+os.makedirs("Logs", exist_ok=True)
+logging.basicConfig(
+    filename=os.path.join("Logs", "automation_log.txt"),
+    level=logging.INFO,
+    format="%(asctime)s: %(levelname)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 class AppiumDriver:
     def __init__(self):
@@ -36,31 +46,74 @@ class AppiumDriver:
 
     def start_session(self, device_id, platform):
         """
-        Placeholder: Start an Appium session for the given device and platform.
-        Platform should be 'android' or 'ios'.
+        Start a simple automation session for the device. The implementation
+        relies on basic ``adb`` or ``idevice`` commands to verify that the
+        device is reachable.
+        ``platform`` should be ``"android"`` or ``"ios"``.
         """
-        pass
+        try:
+            if platform.lower() == "android":
+                subprocess.check_call(["adb", "-s", device_id, "wait-for-device"]) 
+                logger.info(f"Session started for Android device {device_id}")
+            elif platform.lower() == "ios":
+                subprocess.check_call(["ideviceinfo", "-u", device_id])
+                logger.info(f"Session started for iOS device {device_id}")
+            else:
+                raise ValueError(f"Unknown platform: {platform}")
+        except Exception as e:
+            logger.error(f"Failed to start session on {device_id}: {e}")
 
     def stop_session(self, device_id):
         """
-        Placeholder: Stop the Appium session for the given device.
+        Stop the automation session for ``device_id``.
         """
-        pass
+        try:
+            # Try to send the HOME key which works for most Android devices.
+            subprocess.call(["adb", "-s", device_id, "shell", "input", "keyevent", "3"])
+            logger.info(f"Session stopped for device {device_id}")
+        except Exception as e:
+            logger.error(f"Failed to stop session on {device_id}: {e}")
 
     def send_touch(self, device_id, x, y):
         """
-        Placeholder: Send a touch event at (x, y) on the device.
+        Send a tap at ``(x, y)`` on the device.
         """
-        pass
+        try:
+            subprocess.check_call(["adb", "-s", device_id, "shell", "input", "tap", str(x), str(y)])
+            logger.info(f"Touch on {device_id} at ({x}, {y})")
+        except Exception as e:
+            logger.error(f"Failed to send touch to {device_id}: {e}")
 
     def send_key(self, device_id, key_code):
         """
-        Placeholder: Send a key event (e.g., KEYCODE_ENTER) on the device.
+        Send a key event (e.g., ``KEYCODE_ENTER``) on the device.
         """
-        pass
+        try:
+            subprocess.check_call(["adb", "-s", device_id, "shell", "input", "keyevent", str(key_code)])
+            logger.info(f"Key {key_code} sent to {device_id}")
+        except Exception as e:
+            logger.error(f"Failed to send key to {device_id}: {e}")
 
     def swipe(self, device_id, start_x, start_y, end_x, end_y, duration_ms):
         """
-        Placeholder: Perform a swipe gesture.
+        Perform a swipe gesture on ``device_id``.
         """
-        pass
+        try:
+            subprocess.check_call([
+                "adb",
+                "-s",
+                device_id,
+                "shell",
+                "input",
+                "swipe",
+                str(start_x),
+                str(start_y),
+                str(end_x),
+                str(end_y),
+                str(duration_ms),
+            ])
+            logger.info(
+                f"Swipe on {device_id}: ({start_x},{start_y}) -> ({end_x},{end_y}) for {duration_ms}ms"
+            )
+        except Exception as e:
+            logger.error(f"Failed to swipe on {device_id}: {e}")
