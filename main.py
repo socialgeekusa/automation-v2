@@ -267,12 +267,17 @@ class AutomationGUI(QMainWindow):
             return
 
         device_logs = {}
-        pattern = re.compile(r"on\s+([\w-]+)\b")
+        prefix_re = re.compile(r"^\[(\S+)\]")
+        suffix_re = re.compile(r"on\s+([\w-]+)\b")
         with open(log_file, "r") as f:
             for raw in f:
                 line = raw.strip()
-                match = pattern.search(line)
-                device = match.group(1) if match else "Unknown"
+                match = prefix_re.match(line)
+                if match:
+                    device = match.group(1)
+                else:
+                    match = suffix_re.search(line)
+                    device = match.group(1) if match else "Unknown"
                 device_logs.setdefault(device, []).append(line)
 
         self.logs_by_device = device_logs

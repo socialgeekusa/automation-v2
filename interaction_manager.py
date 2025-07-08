@@ -68,7 +68,7 @@ class InteractionManager:
         # choose a random subset of actions each loop
         for action in random.sample(actions, k=random.randint(1, 4)):
             print(f"Performing {action} on {platform} account {account} for device {device_id}")
-            line = f"{time.asctime()}: {action.upper()} {platform} {account} on {device_id}\n"
+            line = f"[{device_id}] {time.asctime()}: {action.upper()} {platform} {account} on {device_id}\n"
             with open(log_path, "a") as log:
                 log.write(line)
             # here you’d call the driver’s methods, e.g. self.driver.swipe(...)
