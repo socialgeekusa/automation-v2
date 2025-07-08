@@ -3,7 +3,7 @@ import os
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout,
-    QMessageBox, QInputDialog
+    QMessageBox, QInputDialog, QSpinBox
 )
 from PyQt5.QtCore import QTimer
 from config_manager import ConfigManager
@@ -190,6 +190,23 @@ class AutomationGUI(QMainWindow):
         self.fast_bot_mode_btn.clicked.connect(self.toggle_fast_bot_mode)
         layout.addWidget(self.fast_bot_mode_btn)
 
+        delay_layout = QHBoxLayout()
+        delay_layout.addWidget(QLabel("Min Delay (s):"))
+        self.min_delay_spin = QSpinBox()
+        self.min_delay_spin.setRange(0, 120)
+        self.min_delay_spin.setValue(self.config.settings.get("min_delay", 5))
+        self.min_delay_spin.valueChanged.connect(self.update_delay_settings)
+        delay_layout.addWidget(self.min_delay_spin)
+
+        delay_layout.addWidget(QLabel("Max Delay (s):"))
+        self.max_delay_spin = QSpinBox()
+        self.max_delay_spin.setRange(0, 120)
+        self.max_delay_spin.setValue(self.config.settings.get("max_delay", 15))
+        self.max_delay_spin.valueChanged.connect(self.update_delay_settings)
+        delay_layout.addWidget(self.max_delay_spin)
+
+        layout.addLayout(delay_layout)
+
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Settings")
 
@@ -197,6 +214,20 @@ class AutomationGUI(QMainWindow):
         state = self.fast_bot_mode_btn.isChecked()
         self.config.settings['fast_mode'] = state
         self.fast_bot_mode_btn.setText(f"Toggle Fast Bot Mode ({'ON' if state else 'OFF'})")
+        self.config.save_json(self.config.settings_file, self.config.settings)
+
+    def update_delay_settings(self):
+        min_val = self.min_delay_spin.value()
+        max_val = self.max_delay_spin.value()
+        if min_val > max_val:
+            if self.sender() is self.min_delay_spin:
+                self.max_delay_spin.setValue(min_val)
+                max_val = min_val
+            else:
+                self.min_delay_spin.setValue(max_val)
+                min_val = max_val
+        self.config.settings['min_delay'] = min_val
+        self.config.settings['max_delay'] = max_val
         self.config.save_json(self.config.settings_file, self.config.settings)
 
     def logs_tab(self):
