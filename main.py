@@ -118,16 +118,28 @@ class AutomationGUI(QMainWindow):
             row.addWidget(QLabel(f"{nickname} ({device_id})"))
 
             tiktok_active = details.get("TikTok", {}).get("active")
+            row.addWidget(QLabel(f"TikTok Active: {tiktok_active or 'None'}"))
             tiktok_btn = QPushButton("Set Active TikTok")
             tiktok_btn.clicked.connect(lambda _, d=device_id: self.choose_active_account(d, "TikTok"))
-            row.addWidget(QLabel(f"TikTok Active: {tiktok_active or 'None'}"))
             row.addWidget(tiktok_btn)
+            add_tiktok = QPushButton("Add TikTok Account")
+            add_tiktok.clicked.connect(lambda _, d=device_id: self.add_account(d, "TikTok"))
+            row.addWidget(add_tiktok)
+            remove_tiktok = QPushButton("Remove TikTok Account")
+            remove_tiktok.clicked.connect(lambda _, d=device_id: self.remove_account(d, "TikTok"))
+            row.addWidget(remove_tiktok)
 
             instagram_active = details.get("Instagram", {}).get("active")
+            row.addWidget(QLabel(f"Instagram Active: {instagram_active or 'None'}"))
             insta_btn = QPushButton("Set Active Instagram")
             insta_btn.clicked.connect(lambda _, d=device_id: self.choose_active_account(d, "Instagram"))
-            row.addWidget(QLabel(f"Instagram Active: {instagram_active or 'None'}"))
             row.addWidget(insta_btn)
+            add_instagram = QPushButton("Add Instagram Account")
+            add_instagram.clicked.connect(lambda _, d=device_id: self.add_account(d, "Instagram"))
+            row.addWidget(add_instagram)
+            remove_instagram = QPushButton("Remove Instagram Account")
+            remove_instagram.clicked.connect(lambda _, d=device_id: self.remove_account(d, "Instagram"))
+            row.addWidget(remove_instagram)
 
             container = QWidget()
             container.setLayout(row)
@@ -141,6 +153,33 @@ class AutomationGUI(QMainWindow):
         account, ok = QInputDialog.getItem(self, f"Select Active {platform}", f"Choose account for {device_id}:", accounts, 0, False)
         if ok and account:
             self.config.set_active_account(device_id, platform, account)
+            self.load_accounts()
+
+    def add_account(self, device_id, platform):
+        account, ok = QInputDialog.getText(
+            self,
+            f"Add {platform} Account",
+            f"Enter {platform} username for {device_id}:"
+        )
+        if ok and account:
+            self.config.add_account(device_id, platform, account)
+            self.load_accounts()
+
+    def remove_account(self, device_id, platform):
+        accounts = self.config.accounts.get(device_id, {}).get(platform, {}).get("accounts", [])
+        if not accounts:
+            QMessageBox.warning(self, "No Accounts", f"No {platform} accounts for {device_id}")
+            return
+        account, ok = QInputDialog.getItem(
+            self,
+            f"Remove {platform} Account",
+            f"Select {platform} account to remove from {device_id}:",
+            accounts,
+            0,
+            False
+        )
+        if ok and account:
+            self.config.remove_account(device_id, platform, account)
             self.load_accounts()
 
     def warmup_tab(self):
