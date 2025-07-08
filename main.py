@@ -1,5 +1,6 @@
 import sys
 import os
+import threading
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout,
@@ -207,8 +208,19 @@ class AutomationGUI(QMainWindow):
     def run_automation(self):
         self.post_manager.run()
         self.interaction_manager.run()
+
+        def wait_for_completion():
+            if self.post_manager.thread:
+                self.post_manager.thread.join()
+            if self.interaction_manager.thread:
+                self.interaction_manager.thread.join()
+            QTimer.singleShot(0, self.finish_session)
+
+        threading.Thread(target=wait_for_completion, daemon=True).start()
+
+    def finish_session(self):
         self.session_summary.show_summary()
-        QMessageBox.information(self, "Session Complete", "Automation completed successfully.")
+        QMessageBox.information(self, "Session Complete", "Automation session completed successfully.")
 
     def toggle_pause(self):
         if self.pause_btn.isChecked():
