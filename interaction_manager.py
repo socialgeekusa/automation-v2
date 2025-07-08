@@ -1,6 +1,7 @@
 import threading
 import time
 import random
+import os
 
 class InteractionManager:
     def __init__(self, driver, config):
@@ -49,13 +50,31 @@ class InteractionManager:
             time.sleep(10)
 
     def perform_interactions(self, device_id, platform, account):
-        # Placeholder for human-like interactions: scroll, like, comment, etc.
-        actions = ["scroll", "like", "comment", "save", "share", "view_story", "like_story"]
+        """Perform a subset of interactions and log each action."""
+        actions = [
+            "scroll",
+            "like",
+            "comment",
+            "save",
+            "share",
+            "view_story",
+            "like_story",
+        ]
+
+        log_dir = os.path.join("Logs")
+        log_path = os.path.join(log_dir, "automation_log.txt")
+        os.makedirs(log_dir, exist_ok=True)
+
         # choose a random subset of actions each loop
         for action in random.sample(actions, k=random.randint(1, 4)):
             print(f"Performing {action} on {platform} account {account} for device {device_id}")
+            line = f"{time.asctime()}: {action.upper()} {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log:
+                log.write(line)
             # here you’d call the driver’s methods, e.g. self.driver.swipe(...)
-            time.sleep(random.uniform(
-                self.config.settings.get("min_delay", 5),
-                self.config.settings.get("max_delay", 15)
-            ))
+            time.sleep(
+                random.uniform(
+                    self.config.settings.get("min_delay", 5),
+                    self.config.settings.get("max_delay", 15)
+                )
+            )
