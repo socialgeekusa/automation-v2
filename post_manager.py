@@ -48,12 +48,21 @@ class PostManager:
             time.sleep(10)
 
     def post_draft(self, device_id, platform, account):
-        log_path = os.path.join("Logs", "post_log.txt")
+        log_dir = os.path.join("Logs")
+        log_path = os.path.join(log_dir, "post_log.txt")
+        automation_log = os.path.join(log_dir, "automation_log.txt")
+        os.makedirs(log_dir, exist_ok=True)
         try:
             # Placeholder for draft posting logic
             print(f"Posting draft on {platform} account {account} for device {device_id}")
+            line = f"{time.asctime()}: SUCCESS post {platform} {account} on {device_id}\n"
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: SUCCESS post {platform} {account} on {device_id}\n")
+                log.write(line)
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(line)
         except Exception as e:
+            line = f"{time.asctime()}: FAIL post {platform} {account} on {device_id}: {e}\n"
             with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: FAIL post {platform} {account} on {device_id}: {e}\n")
+                log.write(line)
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(line)
