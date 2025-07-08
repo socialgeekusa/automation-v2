@@ -46,6 +46,7 @@ class AutomationGUI(QMainWindow):
         layout.addWidget(QLabel("📱 Connected Devices:"))
 
         self.device_list = QListWidget()
+        self.device_list.itemDoubleClicked.connect(self.edit_nickname)
         layout.addWidget(self.device_list)
 
         refresh_btn = QPushButton("Refresh Devices")
@@ -62,6 +63,26 @@ class AutomationGUI(QMainWindow):
         for device in devices:
             nickname = self.config.devices.get(device, device)
             self.device_list.addItem(f"{nickname} ({device})")
+
+    def edit_nickname(self, item):
+        text = item.text()
+        device_id = text
+        current_nick = text
+        if '(' in text and text.endswith(')'):
+            name_part, id_part = text.rsplit('(', 1)
+            device_id = id_part[:-1]
+            current_nick = name_part.strip()
+
+        new_nick, ok = QInputDialog.getText(
+            self,
+            "Set Nickname",
+            f"Enter nickname for {device_id}:",
+            text=current_nick
+        )
+
+        if ok and new_nick:
+            self.config.update_nickname(device_id, new_nick)
+            self.refresh_devices()
 
     def accounts_tab(self):
         tab = QWidget()
