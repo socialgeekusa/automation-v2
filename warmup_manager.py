@@ -29,6 +29,14 @@ class WarmupManager:
         with open(self.progress_file, "w") as f:
             json.dump(self.progress, f, indent=4)
 
+    def get_progress(self, device_id=None):
+        """Return warmup progress for a specific device or all devices."""
+        # Reload progress from disk in case other threads updated it
+        self.progress = self._load_progress()
+        if device_id is None:
+            return dict(self.progress)
+        return self.progress.get(device_id, 0)
+
     def start_all_warmup(self):
         """
         Start warmup for every device/account in config.

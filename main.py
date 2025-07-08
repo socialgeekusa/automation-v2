@@ -25,6 +25,8 @@ class AutomationGUI(QMainWindow):
         self.post_manager = PostManager(self.driver, self.config)
         self.interaction_manager = InteractionManager(self.driver, self.config)
         self.session_summary = SessionSummary()
+        self.warmup_labels = {}
+        self.warmup_timer = QTimer()
 
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
@@ -123,12 +125,39 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("🔥 Warmup Phase Control:"))
 
+        self.warmup_container = QWidget()
+        self.warmup_layout = QVBoxLayout()
+        self.warmup_container.setLayout(self.warmup_layout)
+        layout.addWidget(self.warmup_container)
+
         warmup_btn = QPushButton("Start Warmup For All")
         warmup_btn.clicked.connect(self.warmup_manager.start_all_warmup)
         layout.addWidget(warmup_btn)
 
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Warmup")
+        self.load_warmup_progress()
+        self.warmup_timer.timeout.connect(self.load_warmup_progress)
+        self.warmup_timer.start(5000)
+
+    def load_warmup_progress(self):
+        for i in reversed(range(self.warmup_layout.count())):
+            item = self.warmup_layout.takeAt(i)
+            if item and item.widget():
+                item.widget().deleteLater()
+
+        progress = self.warmup_manager.get_progress()
+        for device_id in self.config.accounts:
+            nickname = self.config.devices.get(device_id, device_id)
+            row = QHBoxLayout()
+            row.addWidget(QLabel(f"{nickname} ({device_id})"))
+            day = progress.get(device_id, 0)
+            label = QLabel(f"Day {day} of {self.warmup_manager.total_days}")
+            row.addWidget(label)
+            self.warmup_labels[device_id] = label
+            container = QWidget()
+            container.setLayout(row)
+            self.warmup_layout.addWidget(container)
 
     def global_settings_tab(self):
         tab = QWidget()
