@@ -38,3 +38,11 @@ def test_account_settings(tmp_path):
     cm = create_cm(tmp_path)
     cm.set_account_settings('user1', {'min_delay': 1})
     assert cm.get_account_settings('user1')['min_delay'] == 1
+
+
+def test_save_device_name(tmp_path):
+    cm = create_cm(tmp_path)
+    cm.add_device('dev1')
+    cm.save_device_name('dev1', 'Phone A')
+    data = cm.load_json(cm.devices_file)
+    assert any(d['id'] == 'dev1' and d['name'] == 'Phone A' for d in data['devices'])

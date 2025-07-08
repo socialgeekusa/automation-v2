@@ -3,10 +3,11 @@ import os
 import re
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
-    QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout,
+    QLabel, QTabWidget, QTextEdit, QLineEdit, QHBoxLayout,
     QMessageBox, QInputDialog, QSpinBox, QComboBox
 )
 from PyQt5.QtCore import QTimer
+import time
 from config_manager import ConfigManager
 from appium_driver import AppiumDriver
 from warmup_manager import WarmupManager
@@ -44,49 +45,105 @@ class AutomationGUI(QMainWindow):
         self.logs_tab()
         self.start_tab()
 
+    class DeviceRow(QWidget):
+        def __init__(self, parent, device_id, name, accounts):
+            super().__init__()
+            self.gui = parent
+            self.device_id = device_id
+            row = QHBoxLayout()
+            row.addWidget(QLabel(device_id))
+            self.name_edit = QLineEdit(name)
+            self.name_edit.setMaxLength(30)
+            self.name_edit.editingFinished.connect(self.save_name)
+            row.addWidget(self.name_edit)
+            self.accounts_label = QLabel(str(accounts))
+            row.addWidget(self.accounts_label)
+
+            self.start_btn = QPushButton("Start")
+            self.start_btn.setStyleSheet("background-color: green")
+            self.start_btn.clicked.connect(self.start_device)
+            row.addWidget(self.start_btn)
+
+            add_btn = QPushButton("+")
+            add_btn.clicked.connect(self.add_account)
+            row.addWidget(add_btn)
+
+            manage_btn = QPushButton("Manage")
+            manage_btn.setStyleSheet("background-color: yellow")
+            manage_btn.clicked.connect(self.manage_device)
+            row.addWidget(manage_btn)
+
+            del_btn = QPushButton("Delete")
+            del_btn.setStyleSheet("background-color: red")
+            del_btn.clicked.connect(self.delete_device)
+            row.addWidget(del_btn)
+
+            self.setLayout(row)
+
+        def save_name(self):
+            new_name = self.name_edit.text().strip()[:30]
+            if not new_name:
+                QMessageBox.warning(self, "Invalid Name", "Device name cannot be blank")
+                self.name_edit.setText(self.gui.config.devices.get(self.device_id, self.device_id))
+                return
+            self.gui.config.save_device_name(self.device_id, new_name)
+
+        def start_device(self):
+            self.start_btn.setStyleSheet("background-color: orange")
+
+        def add_account(self):
+            QMessageBox.information(self, "Add Account", "Feature coming soon")
+
+        def manage_device(self):
+            QMessageBox.information(self, "Manage Device", "Feature coming soon")
+
+        def delete_device(self):
+            if QMessageBox.question(self, "Delete Device", f"Remove {self.device_id}?", QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+                self.gui.config.remove_device(self.device_id)
+                self.gui.refresh_devices()
+
     def devices_tab(self):
         tab = QWidget()
         layout = QVBoxLayout()
         layout.addWidget(QLabel("📱 Connected Devices:"))
 
-        self.device_list = QListWidget()
-        self.device_list.itemDoubleClicked.connect(self.edit_nickname)
-        layout.addWidget(self.device_list)
+        self.devices_container = QWidget()
+        self.devices_layout = QVBoxLayout()
+        self.devices_container.setLayout(self.devices_layout)
+        layout.addWidget(self.devices_container)
 
-        refresh_btn = QPushButton("Refresh Devices")
-        refresh_btn.clicked.connect(self.refresh_devices)
-        layout.addWidget(refresh_btn)
+        self.last_scan_label = QLabel("Last Scanned: --:--:--")
+        layout.addWidget(self.last_scan_label)
+
+        self.refresh_btn = QPushButton("Refresh Devices")
+        self.refresh_btn.clicked.connect(self.refresh_devices)
+        layout.addWidget(self.refresh_btn)
 
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Devices")
         self.refresh_devices()
 
     def refresh_devices(self):
+        self.refresh_btn.setEnabled(False)
+        self.last_scan_label.setText("Scanning...")
+        QApplication.processEvents()
         devices = self.driver.list_devices()
-        self.device_list.clear()
+        self.last_scan_label.setText(f"Last Scanned: {time.strftime('%H:%M:%S')}")
+        self.refresh_btn.setEnabled(True)
+
+        for i in reversed(range(self.devices_layout.count())):
+            item = self.devices_layout.takeAt(i)
+            if item and item.widget():
+                item.widget().deleteLater()
+
         for device in devices:
-            nickname = self.config.devices.get(device, device)
-            self.device_list.addItem(f"{nickname} ({device})")
+            self.config.add_device(device)
+            name = self.config.devices.get(device, device)
+            self.config.update_device_accounts(device)
+            accounts = next((d["accounts"] for d in self.config.devices_info if d["id"] == device), 0)
+            row = self.DeviceRow(self, device, name, accounts)
+            self.devices_layout.addWidget(row)
 
-    def edit_nickname(self, item):
-        text = item.text()
-        device_id = text
-        current_nick = text
-        if '(' in text and text.endswith(')'):
-            name_part, id_part = text.rsplit('(', 1)
-            device_id = id_part[:-1]
-            current_nick = name_part.strip()
-
-        new_nick, ok = QInputDialog.getText(
-            self,
-            "Set Nickname",
-            f"Enter nickname for {device_id}:",
-            text=current_nick
-        )
-
-        if ok and new_nick:
-            self.config.update_nickname(device_id, new_nick)
-            self.refresh_devices()
 
     def accounts_tab(self):
         tab = QWidget()

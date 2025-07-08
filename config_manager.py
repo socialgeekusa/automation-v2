@@ -12,7 +12,16 @@ class ConfigManager:
         self.settings_file = os.path.join(self.config_folder, "settings.json")
         self.account_settings_file = os.path.join(self.config_folder, "account_settings.json")
 
-        self.devices = self.load_json(self.devices_file, default={})
+        self.devices_data = self.load_json(self.devices_file, default={"devices": []})
+        if isinstance(self.devices_data, dict) and "devices" in self.devices_data:
+            self.devices_info = self.devices_data.get("devices", [])
+        else:
+            # backward compatibility with old dict format
+            self.devices_info = [
+                {"id": d_id, "name": name, "accounts": 0}
+                for d_id, name in (self.devices_data or {}).items()
+            ]
+        self.devices = {d["id"]: d.get("name", d["id"]) for d in self.devices_info}
         self.accounts = self.load_json(self.accounts_file, default={})
         self.account_settings = self.load_json(self.account_settings_file, default={})
         self.settings = self.load_json(self.settings_file, default={
@@ -24,6 +33,9 @@ class ConfigManager:
                 "Instagram": {"likes": [30,50], "follows": [10,15], "comments": [5,8], "shares": [3,5], "story_views": [100,200], "story_likes": [10,20], "posts": [0,1]}
             }
         })
+        for dev in self.devices_info:
+            dev["accounts"] = self._get_account_count(dev["id"])
+        self._save_devices_info()
 
     def load_json(self, filepath, default=None):
         if not os.path.exists(filepath):
@@ -43,19 +55,54 @@ class ConfigManager:
         except Exception as e:
             print(f"Error saving {filepath}: {e}")
 
+    def _save_devices_info(self):
+        self.save_json(self.devices_file, {"devices": self.devices_info})
+
+    def _get_account_count(self, device_id):
+        count = 0
+        if device_id in self.accounts:
+            for platform_data in self.accounts[device_id].values():
+                count += len(platform_data.get("accounts", []))
+        return count
+
+    def update_device_accounts(self, device_id):
+        for dev in self.devices_info:
+            if dev["id"] == device_id:
+                dev["accounts"] = self._get_account_count(device_id)
+                self._save_devices_info()
+                break
+
+    def save_device_name(self, device_id, new_name):
+        self.devices[device_id] = new_name
+        found = False
+        for dev in self.devices_info:
+            if dev["id"] == device_id:
+                dev["name"] = new_name
+                found = True
+                break
+        if not found:
+            self.devices_info.append({
+                "id": device_id,
+                "name": new_name,
+                "accounts": self._get_account_count(device_id),
+            })
+        self._save_devices_info()
+
     def add_device(self, device_id, nickname=None):
         if device_id not in self.devices:
-            self.devices[device_id] = nickname or device_id
-            self.save_json(self.devices_file, self.devices)
+            name = nickname or device_id
+            self.devices[device_id] = name
+            self.devices_info.append({"id": device_id, "name": name, "accounts": self._get_account_count(device_id)})
+            self._save_devices_info()
 
     def remove_device(self, device_id):
         if device_id in self.devices:
             del self.devices[device_id]
-            self.save_json(self.devices_file, self.devices)
+            self.devices_info = [d for d in self.devices_info if d["id"] != device_id]
+            self._save_devices_info()
 
     def update_nickname(self, device_id, nickname):
-        self.devices[device_id] = nickname
-        self.save_json(self.devices_file, self.devices)
+        self.save_device_name(device_id, nickname)
 
     def add_account(self, device_id, platform, account_name):
         if device_id not in self.accounts:
@@ -67,6 +114,7 @@ class ConfigManager:
             if self.accounts[device_id][platform]["active"] is None:
                 self.accounts[device_id][platform]["active"] = account_name
             self.save_json(self.accounts_file, self.accounts)
+            self.update_device_accounts(device_id)
 
     def remove_account(self, device_id, platform, account_name):
         if device_id in self.accounts and platform in self.accounts[device_id]:
@@ -76,6 +124,7 @@ class ConfigManager:
                 if self.accounts[device_id][platform]["active"] == account_name:
                     self.accounts[device_id][platform]["active"] = accounts_list[0] if accounts_list else None
                 self.save_json(self.accounts_file, self.accounts)
+                self.update_device_accounts(device_id)
 
     def set_active_account(self, device_id, platform, account_name):
         if device_id in self.accounts and platform in self.accounts[device_id]:
