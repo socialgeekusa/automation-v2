@@ -112,7 +112,9 @@ class AutomationGUI(QMainWindow):
             if item and item.widget():
                 item.widget().deleteLater()
 
-        for device_id, details in self.config.accounts.items():
+        device_ids = set(self.driver.list_devices()) | set(self.config.accounts.keys())
+        for device_id in sorted(device_ids):
+            details = self.config.accounts.get(device_id, {})
             nickname = self.config.devices.get(device_id, device_id)
             row = QHBoxLayout()
             row.addWidget(QLabel(f"{nickname} ({device_id})"))
