@@ -207,8 +207,15 @@ class AutomationGUI(QMainWindow):
     def run_automation(self):
         self.post_manager.run()
         self.interaction_manager.run()
+
+        # wait for both managers to finish before showing results
+        if self.post_manager.thread:
+            self.post_manager.thread.join()
+        if self.interaction_manager.thread:
+            self.interaction_manager.thread.join()
+
         self.session_summary.show_summary()
-        QMessageBox.information(self, "Session Complete", "Automation completed successfully.")
+        QMessageBox.information(self, "Session Complete", "Automation tasks have completed.")
 
     def toggle_pause(self):
         if self.pause_btn.isChecked():
