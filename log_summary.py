@@ -30,12 +30,12 @@ def accumulate_logs():
     if os.path.exists(WARMUP_LOG):
         with open(WARMUP_LOG, "r") as f:
             for line in f:
-                m = re.match(r"(?P<ts>[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d+ \d+:\d+:\d+ \d{4}): Warmup (\w+) .* on (\S+)", line)
+                m = re.match(r"\[(?P<device>[^\]]+)\] (?P<ts>[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d+ \d+:\d+:\d+ \d{4}): Warmup (\w+)", line)
                 if not m:
                     continue
                 ts = parse_time(m.group("ts"))
-                action = m.group(2).upper()
-                device = m.group(3)
+                action = m.group(3).upper()
+                device = m.group("device")
                 metric = action_map.get(action)
                 if metric:
                     counts[device][metric] += 1
@@ -48,11 +48,11 @@ def accumulate_logs():
     if os.path.exists(POST_LOG):
         with open(POST_LOG, "r") as f:
             for line in f:
-                m = re.match(r"(?P<ts>[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d+ \d+:\d+:\d+ \d{4}): SUCCESS post \w+ \S+ on (\S+)", line)
+                m = re.match(r"\[(?P<device>[^\]]+)\] (?P<ts>[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d+ \d+:\d+:\d+ \d{4}): SUCCESS post \w+ \S+ on (\S+)", line)
                 if not m:
                     continue
                 ts = parse_time(m.group("ts"))
-                device = m.group(2)
+                device = m.group("device")
                 counts[device]["posts"] += 1
                 if ts:
                     if start_time is None or ts < start_time:

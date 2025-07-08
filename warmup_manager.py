@@ -112,7 +112,8 @@ class WarmupManager:
         for _ in range(like_min):
             print(f"Warmup like on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            line = f"{time.asctime()}: Warmup LIKE {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: Warmup LIKE {platform} {account} on {device_id}\n"
             append_logs(line)
 
         # Follows
@@ -120,7 +121,8 @@ class WarmupManager:
         for _ in range(follow_min):
             print(f"Warmup follow on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            line = f"{time.asctime()}: Warmup FOLLOW {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: Warmup FOLLOW {platform} {account} on {device_id}\n"
             append_logs(line)
 
         # Comments
@@ -128,7 +130,8 @@ class WarmupManager:
         for _ in range(comment_min):
             print(f"Warmup comment on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            line = f"{time.asctime()}: Warmup COMMENT {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: Warmup COMMENT {platform} {account} on {device_id}\n"
             append_logs(line)
 
         # Shares
@@ -136,7 +139,8 @@ class WarmupManager:
         for _ in range(share_min):
             print(f"Warmup share on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            line = f"{time.asctime()}: Warmup SHARE {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: Warmup SHARE {platform} {account} on {device_id}\n"
             append_logs(line)
 
         # Story Views
@@ -144,7 +148,8 @@ class WarmupManager:
         for _ in range(view_min):
             print(f"Warmup story view on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            line = f"{time.asctime()}: Warmup STORY_VIEW {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: Warmup STORY_VIEW {platform} {account} on {device_id}\n"
             append_logs(line)
 
         # Story Likes
@@ -152,7 +157,8 @@ class WarmupManager:
         for _ in range(like_story_min):
             print(f"Warmup story like on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            line = f"{time.asctime()}: Warmup STORY_LIKE {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: Warmup STORY_LIKE {platform} {account} on {device_id}\n"
             append_logs(line)
 
         # Posts (if warmup day threshold reached)

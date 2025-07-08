@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QListWidget, QLineEdit, QHBoxLayout,
@@ -260,12 +261,19 @@ class AutomationGUI(QMainWindow):
         lines = []
         with open(log_file, "r") as f:
             for line in f:
+                text = line.strip()
+                m = re.match(r"\[(?P<device>[^\]]+)\]\s+(?P<rest>.*)", text)
+                prefix_html = ""
+                if m:
+                    device = m.group("device")
+                    text = m.group("rest")
+                    prefix_html = f'<span style="color:blue">[{device}]</span> '
                 color = "gray"
-                if "SUCCESS" in line:
+                if "SUCCESS" in text:
                     color = "green"
-                elif "FAIL" in line:
+                elif "FAIL" in text:
                     color = "red"
-                lines.append(f'<span style="color:{color}">{line.strip()}</span>')
+                lines.append(prefix_html + f'<span style="color:{color}">{text}</span>')
         self.log_view.setHtml("<br>".join(lines))
 
     def start_tab(self):

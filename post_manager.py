@@ -64,13 +64,15 @@ class PostManager:
         try:
             # Placeholder for draft posting logic
             print(f"Posting draft on {platform} account {account} for device {device_id}")
-            line = f"{time.asctime()}: SUCCESS post {platform} {account} on {device_id}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: SUCCESS post {platform} {account} on {device_id}\n"
             with open(log_path, "a") as log:
                 log.write(line)
             with open(automation_log, "a") as auto_log:
                 auto_log.write(line)
         except Exception as e:
-            line = f"{time.asctime()}: FAIL post {platform} {account} on {device_id}: {e}\n"
+            timestamp = time.asctime()
+            line = f"[{device_id}] {timestamp}: FAIL post {platform} {account} on {device_id}: {e}\n"
             with open(log_path, "a") as log:
                 log.write(line)
             with open(automation_log, "a") as auto_log:
