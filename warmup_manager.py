@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+import random
 
 class WarmupManager:
     def __init__(self, driver, config):
@@ -59,49 +60,49 @@ class WarmupManager:
 
         # Likes
         like_min, like_max = limits.get("likes", [0, 0])
-        for _ in range(like_min):
+        for _ in range(random.randint(like_min, like_max)):
             print(f"Warmup like on {platform} account {account} for device {device_id}")
-            time.sleep(time.uniform(min_delay, max_delay))
+            time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
                 log.write(f"{time.asctime()}: Warmup LIKE {platform} {account} on {device_id}\n")
 
         # Follows
         follow_min, follow_max = limits.get("follows", [0, 0])
-        for _ in range(follow_min):
+        for _ in range(random.randint(follow_min, follow_max)):
             print(f"Warmup follow on {platform} account {account} for device {device_id}")
-            time.sleep(time.uniform(min_delay, max_delay))
+            time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
                 log.write(f"{time.asctime()}: Warmup FOLLOW {platform} {account} on {device_id}\n")
 
         # Comments
         comment_min, comment_max = limits.get("comments", [0, 0])
-        for _ in range(comment_min):
+        for _ in range(random.randint(comment_min, comment_max)):
             print(f"Warmup comment on {platform} account {account} for device {device_id}")
-            time.sleep(time.uniform(min_delay, max_delay))
+            time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
                 log.write(f"{time.asctime()}: Warmup COMMENT {platform} {account} on {device_id}\n")
 
         # Shares
         share_min, share_max = limits.get("shares", [0, 0])
-        for _ in range(share_min):
+        for _ in range(random.randint(share_min, share_max)):
             print(f"Warmup share on {platform} account {account} for device {device_id}")
-            time.sleep(time.uniform(min_delay, max_delay))
+            time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
                 log.write(f"{time.asctime()}: Warmup SHARE {platform} {account} on {device_id}\n")
 
         # Story Views
         view_min, view_max = limits.get("story_views", [0, 0])
-        for _ in range(view_min):
+        for _ in range(random.randint(view_min, view_max)):
             print(f"Warmup story view on {platform} account {account} for device {device_id}")
-            time.sleep(time.uniform(min_delay, max_delay))
+            time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
                 log.write(f"{time.asctime()}: Warmup STORY_VIEW {platform} {account} on {device_id}\n")
 
         # Story Likes
         like_story_min, like_story_max = limits.get("story_likes", [0, 0])
-        for _ in range(like_story_min):
+        for _ in range(random.randint(like_story_min, like_story_max)):
             print(f"Warmup story like on {platform} account {account} for device {device_id}")
-            time.sleep(time.uniform(min_delay, max_delay))
+            time.sleep(random.uniform(min_delay, max_delay))
             with open(log_path, "a") as log:
                 log.write(f"{time.asctime()}: Warmup STORY_LIKE {platform} {account} on {device_id}\n")
 
