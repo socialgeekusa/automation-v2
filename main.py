@@ -6,9 +6,10 @@ from PyQt5.QtWidgets import (
     QLabel, QTabWidget, QTextEdit, QLineEdit, QHBoxLayout,
     QMessageBox, QInputDialog, QSpinBox, QComboBox
 )
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, Qt
 import time
 from config_manager import ConfigManager
+import utils
 from appium_driver import AppiumDriver
 from warmup_manager import WarmupManager
 from post_manager import PostManager
@@ -33,6 +34,9 @@ class AutomationGUI(QMainWindow):
 
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
+        branding = QLabel("XO v1.1 – Ultimate Agency Edition")
+        branding.setStyleSheet("font-weight: bold")
+        self.tabs.setCornerWidget(branding, Qt.TopLeftCorner)
 
         self.init_tabs()
         self.show()
@@ -46,39 +50,77 @@ class AutomationGUI(QMainWindow):
         self.start_tab()
 
     class DeviceRow(QWidget):
-        def __init__(self, parent, device_id, name, accounts):
+        def __init__(self, parent, device_id, name, counts, os_type):
             super().__init__()
             self.gui = parent
             self.device_id = device_id
+            self.os_type = os_type
+
             row = QHBoxLayout()
+            row.setContentsMargins(5, 5, 5, 5)
+            row.setSpacing(10)
+
             row.addWidget(QLabel(device_id))
+
+            name_layout = QHBoxLayout()
             self.name_edit = QLineEdit(name)
             self.name_edit.setMaxLength(30)
             self.name_edit.editingFinished.connect(self.save_name)
-            row.addWidget(self.name_edit)
-            self.accounts_label = QLabel(str(accounts))
+            name_layout.addWidget(self.name_edit)
+            self.status_badge = QLabel()
+            self.status_badge.setFixedSize(10, 10)
+            name_layout.addWidget(self.status_badge)
+            name_container = QWidget()
+            name_container.setLayout(name_layout)
+            row.addWidget(name_container)
+
+            self.accounts_label = QLabel(self._format_counts(counts))
             row.addWidget(self.accounts_label)
 
+            self.activity_label = QLabel(self._activity_text())
+            row.addWidget(self.activity_label)
+
             self.start_btn = QPushButton("Start")
-            self.start_btn.setStyleSheet("background-color: green")
+            self.start_btn.setStyleSheet("background-color: green; border-radius:4px")
             self.start_btn.clicked.connect(self.start_device)
             row.addWidget(self.start_btn)
 
-            add_btn = QPushButton("+")
-            add_btn.clicked.connect(self.add_account)
-            row.addWidget(add_btn)
-
             manage_btn = QPushButton("Manage")
-            manage_btn.setStyleSheet("background-color: yellow")
+            manage_btn.setStyleSheet("background-color: #FFA500; border-radius:4px")
             manage_btn.clicked.connect(self.manage_device)
             row.addWidget(manage_btn)
 
             del_btn = QPushButton("Delete")
-            del_btn.setStyleSheet("background-color: red")
+            del_btn.setStyleSheet("background-color: red; border-radius:4px")
             del_btn.clicked.connect(self.delete_device)
             row.addWidget(del_btn)
 
             self.setLayout(row)
+            self.setStyleSheet("border:1px solid #ccc; border-radius:8px")
+            self.update_status_badge()
+            if self.gui.config.get_device_status(self.device_id) == "Active":
+                self.start_btn.setStyleSheet("background-color: blue; border-radius:4px")
+                self.start_btn.setText("Running")
+
+        def _format_counts(self, counts):
+            return f"TikTok: {counts.get('TikTok',0)} | Instagram: {counts.get('Instagram',0)}"
+
+        def _activity_text(self):
+            tt = self.gui.config.get_last_activity(self.device_id, "TikTok")
+            ig = self.gui.config.get_last_activity(self.device_id, "Instagram")
+            return f"TT: {utils.format_last_activity(tt)} | IG: {utils.format_last_activity(ig)}"
+
+        def update_activity_label(self):
+            self.activity_label.setText(self._activity_text())
+
+        def update_status_badge(self):
+            status = self.gui.config.get_device_status(self.device_id)
+            color = {
+                "Active": "green",
+                "Idle": "yellow",
+                "Offline": "red",
+            }.get(status, "gray")
+            self.status_badge.setStyleSheet(f"border-radius:5px;background-color:{color}")
 
         def save_name(self):
             new_name = self.name_edit.text().strip()[:30]
@@ -89,7 +131,13 @@ class AutomationGUI(QMainWindow):
             self.gui.config.save_device_name(self.device_id, new_name)
 
         def start_device(self):
-            self.start_btn.setStyleSheet("background-color: orange")
+            self.gui.config.set_device_status(self.device_id, "Active")
+            self.gui.config.update_last_activity(self.device_id, "TikTok")
+            self.gui.config.update_last_activity(self.device_id, "Instagram")
+            self.start_btn.setStyleSheet("background-color: blue; border-radius:4px")
+            self.start_btn.setText("Running")
+            self.update_status_badge()
+            self.update_activity_label()
 
         def add_account(self):
             QMessageBox.information(self, "Add Account", "Feature coming soon")
@@ -98,7 +146,7 @@ class AutomationGUI(QMainWindow):
             QMessageBox.information(self, "Manage Device", "Feature coming soon")
 
         def delete_device(self):
-            if QMessageBox.question(self, "Delete Device", f"Remove {self.device_id}?", QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            if QMessageBox.question(self, "Delete Device", f"Are you sure you want to delete this device?", QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
                 self.gui.config.remove_device(self.device_id)
                 self.gui.refresh_devices()
 
@@ -107,10 +155,24 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("📱 Connected Devices:"))
 
-        self.devices_container = QWidget()
-        self.devices_layout = QVBoxLayout()
-        self.devices_container.setLayout(self.devices_layout)
-        layout.addWidget(self.devices_container)
+        columns = QHBoxLayout()
+        self.ios_container = QWidget()
+        self.ios_layout = QVBoxLayout()
+        self.ios_container.setLayout(self.ios_layout)
+        ios_col = QVBoxLayout()
+        ios_col.addWidget(QLabel("iPhones"))
+        ios_col.addWidget(self.ios_container)
+        columns.addLayout(ios_col)
+
+        self.android_container = QWidget()
+        self.android_layout = QVBoxLayout()
+        self.android_container.setLayout(self.android_layout)
+        android_col = QVBoxLayout()
+        android_col.addWidget(QLabel("Androids"))
+        android_col.addWidget(self.android_container)
+        columns.addLayout(android_col)
+
+        layout.addLayout(columns)
 
         self.last_scan_label = QLabel("Last Scanned: --:--:--")
         layout.addWidget(self.last_scan_label)
@@ -125,24 +187,54 @@ class AutomationGUI(QMainWindow):
 
     def refresh_devices(self):
         self.refresh_btn.setEnabled(False)
+        self.refresh_btn.setText("Scanning...")
         self.last_scan_label.setText("Scanning...")
         QApplication.processEvents()
-        devices = self.driver.list_devices()
+
+        prev_devices = set(self.config.devices.keys())
+        scanned = set(self.driver.list_devices())
         self.last_scan_label.setText(f"Last Scanned: {time.strftime('%H:%M:%S')}")
         self.refresh_btn.setEnabled(True)
+        self.refresh_btn.setText("Refresh Devices")
 
-        for i in reversed(range(self.devices_layout.count())):
-            item = self.devices_layout.takeAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
+        added = scanned - prev_devices
+        removed = prev_devices - scanned
 
-        for device in devices:
-            self.config.add_device(device)
-            name = self.config.devices.get(device, device)
-            self.config.update_device_accounts(device)
-            accounts = next((d["accounts"] for d in self.config.devices_info if d["id"] == device), 0)
-            row = self.DeviceRow(self, device, name, accounts)
-            self.devices_layout.addWidget(row)
+        for dev in added:
+            self.config.add_device(dev)
+            self.config.update_device_accounts(dev)
+            self.config.set_device_status(dev, "Idle")
+        for dev in removed:
+            self.config.set_device_status(dev, "Offline")
+        for dev in scanned:
+            self.config.update_device_accounts(dev)
+
+        for layout in [self.ios_layout, self.android_layout]:
+            while layout.count():
+                item = layout.takeAt(0)
+                if item and item.widget():
+                    item.widget().deleteLater()
+
+        all_devices = list(self.config.devices.keys())
+        ios_rows = []
+        android_rows = []
+        for dev in all_devices:
+            name = self.config.devices.get(dev, dev)
+            counts = self.config.get_account_counts(dev)
+            os_type = utils.detect_os(dev)
+            row = self.DeviceRow(self, dev, name, counts, os_type)
+            if os_type == "iOS":
+                ios_rows.append((name.lower(), row))
+            else:
+                android_rows.append((name.lower(), row))
+
+        for _, row in sorted(ios_rows, key=lambda x: x[0]):
+            self.ios_layout.addWidget(row)
+        for _, row in sorted(android_rows, key=lambda x: x[0]):
+            self.android_layout.addWidget(row)
+
+        if added or removed:
+            QMessageBox.information(self, "Device Scan", f"{len(added)} devices added. {len(removed)} devices removed.")
 
 
     def accounts_tab(self):
