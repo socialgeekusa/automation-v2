@@ -88,56 +88,70 @@ class WarmupManager:
         limits = self.config.settings.get("warmup_limits", {}).get(platform, {})
         min_delay = self.config.settings.get("min_delay", 5)
         max_delay = self.config.settings.get("max_delay", 15)
-        log_path = os.path.join("Logs", "warmup_log.txt")
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        logs_dir = "Logs"
+        os.makedirs(logs_dir, exist_ok=True)
+        log_path = os.path.join(logs_dir, "warmup_log.txt")
+        automation_log = os.path.join(logs_dir, "automation_log.txt")
 
         # Likes
         like_min, like_max = limits.get("likes", [0, 0])
         for _ in range(like_min):
             print(f"Warmup like on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup LIKE {platform} {account} on {device_id}\n")
+            line = f"{time.asctime()}: Warmup LIKE {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log, open(automation_log, "a") as auto:
+                log.write(line)
+                auto.write(line)
 
         # Follows
         follow_min, follow_max = limits.get("follows", [0, 0])
         for _ in range(follow_min):
             print(f"Warmup follow on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup FOLLOW {platform} {account} on {device_id}\n")
+            line = f"{time.asctime()}: Warmup FOLLOW {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log, open(automation_log, "a") as auto:
+                log.write(line)
+                auto.write(line)
 
         # Comments
         comment_min, comment_max = limits.get("comments", [0, 0])
         for _ in range(comment_min):
             print(f"Warmup comment on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup COMMENT {platform} {account} on {device_id}\n")
+            line = f"{time.asctime()}: Warmup COMMENT {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log, open(automation_log, "a") as auto:
+                log.write(line)
+                auto.write(line)
 
         # Shares
         share_min, share_max = limits.get("shares", [0, 0])
         for _ in range(share_min):
             print(f"Warmup share on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup SHARE {platform} {account} on {device_id}\n")
+            line = f"{time.asctime()}: Warmup SHARE {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log, open(automation_log, "a") as auto:
+                log.write(line)
+                auto.write(line)
 
         # Story Views
         view_min, view_max = limits.get("story_views", [0, 0])
         for _ in range(view_min):
             print(f"Warmup story view on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup STORY_VIEW {platform} {account} on {device_id}\n")
+            line = f"{time.asctime()}: Warmup STORY_VIEW {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log, open(automation_log, "a") as auto:
+                log.write(line)
+                auto.write(line)
 
         # Story Likes
         like_story_min, like_story_max = limits.get("story_likes", [0, 0])
         for _ in range(like_story_min):
             print(f"Warmup story like on {platform} account {account} for device {device_id}")
             time.sleep(random.uniform(min_delay, max_delay))
-            with open(log_path, "a") as log:
-                log.write(f"{time.asctime()}: Warmup STORY_LIKE {platform} {account} on {device_id}\n")
+            line = f"{time.asctime()}: Warmup STORY_LIKE {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log, open(automation_log, "a") as auto:
+                log.write(line)
+                auto.write(line)
 
         # Posts (if warmup day threshold reached)
         post_min, post_max = limits.get("posts", [0, 0])
