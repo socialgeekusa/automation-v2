@@ -67,9 +67,10 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("🔑 Accounts per Device:"))
 
-        self.accounts_text = QTextEdit()
-        self.accounts_text.setReadOnly(True)
-        layout.addWidget(self.accounts_text)
+        self.accounts_container = QWidget()
+        self.accounts_layout = QVBoxLayout()
+        self.accounts_container.setLayout(self.accounts_layout)
+        layout.addWidget(self.accounts_container)
 
         refresh_btn = QPushButton("Refresh Accounts")
         refresh_btn.clicked.connect(self.load_accounts)
@@ -80,20 +81,47 @@ class AutomationGUI(QMainWindow):
         self.load_accounts()
 
     def load_accounts(self):
-        accounts_display = ""
+        layout = self.accounts_layout
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
         for device_id, details in self.config.accounts.items():
             nickname = self.config.devices.get(device_id, device_id)
-            accounts_display += f"{nickname} ({device_id}):\n"
+            layout.addWidget(QLabel(f"{nickname} ({device_id}):"))
+
             tiktok_active = details.get("TikTok", {}).get("active", "None")
             tiktok_accounts = details.get("TikTok", {}).get("accounts", [])
             instagram_active = details.get("Instagram", {}).get("active", "None")
             instagram_accounts = details.get("Instagram", {}).get("accounts", [])
 
-            accounts_display += "  TikTok: " + ", ".join([
+            info = "  TikTok: " + ", ".join([
                 f"{acc}{' [✔️ Active]' if acc == tiktok_active else ''}" for acc in tiktok_accounts]) + "\n"
-            accounts_display += "  Instagram: " + ", ".join([
-                f"{acc}{' [✔️ Active]' if acc == instagram_active else ''}" for acc in instagram_accounts]) + "\n\n"
-        self.accounts_text.setText(accounts_display)
+            info += "  Instagram: " + ", ".join([
+                f"{acc}{' [✔️ Active]' if acc == instagram_active else ''}" for acc in instagram_accounts])
+            info_label = QLabel(info)
+            layout.addWidget(info_label)
+
+            btn_layout = QHBoxLayout()
+            tt_btn = QPushButton("Set Active TikTok")
+            tt_btn.clicked.connect(lambda _, d=device_id: self.choose_active_account(d, "TikTok"))
+            ig_btn = QPushButton("Set Active Instagram")
+            ig_btn.clicked.connect(lambda _, d=device_id: self.choose_active_account(d, "Instagram"))
+            btn_layout.addWidget(tt_btn)
+            btn_layout.addWidget(ig_btn)
+            layout.addLayout(btn_layout)
+
+    def choose_active_account(self, device_id, platform):
+        accounts = self.config.accounts.get(device_id, {}).get(platform, {}).get("accounts", [])
+        if not accounts:
+            QMessageBox.warning(self, "No Accounts", f"No {platform} accounts configured for {device_id}.")
+            return
+        account, ok = QInputDialog.getItem(self, f"Select Active {platform} Account", "Account:", accounts, 0, False)
+        if ok and account:
+            self.config.set_active_account(device_id, platform, account)
+            self.load_accounts()
+
 
     def warmup_tab(self):
         tab = QWidget()
