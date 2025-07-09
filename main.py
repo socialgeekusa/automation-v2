@@ -182,32 +182,34 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
 
-        main_layout = QHBoxLayout()
-        self.iphone_layout = QVBoxLayout()
-        self.android_layout = QVBoxLayout()
-        main_layout.setSpacing(0)
+        # 📦 NEW Devices Tab Layout: Vertical Split (Phase 1.3)
+        vertical_split_layout = QHBoxLayout()
 
+        # 🍏 Left Column: iPhone Devices
+        self.iphone_layout = QVBoxLayout()
         iphone_label = QLabel("\ud83c\udf4f iPhone Devices")
         iphone_label.setStyleSheet("font-weight: bold; font-size: 16px;")
         self.iphone_layout.addWidget(iphone_label)
 
+        # 📱 Right Column: Android Devices
+        self.android_layout = QVBoxLayout()
         android_label = QLabel("\ud83d\udcf1 Android Devices")
         android_label.setStyleSheet("font-weight: bold; font-size: 16px;")
         self.android_layout.addWidget(android_label)
 
-        iphone_container = QWidget()
-        iphone_container.setLayout(self.iphone_layout)
-        android_container = QWidget()
-        android_container.setLayout(self.android_layout)
-
-        main_layout.addWidget(iphone_container)
+        # 🔥 Solid black vertical divider
         divider = QFrame()
         divider.setFrameShape(QFrame.VLine)
-        divider.setLineWidth(2)
-        main_layout.addWidget(divider)
-        main_layout.addWidget(android_container)
+        divider.setFrameShadow(QFrame.Sunken)
+        divider.setStyleSheet("background-color: black; width: 2px;")
 
-        layout.addLayout(main_layout)
+        # 🖤 Add layouts and divider to main layout
+        vertical_split_layout.addLayout(self.iphone_layout)
+        vertical_split_layout.addWidget(divider)
+        vertical_split_layout.addLayout(self.android_layout)
+
+        # 🔄 Apply layout
+        layout.addLayout(vertical_split_layout)
 
         self.last_scan_label = QLabel("Last Scanned: --:--:--")
         layout.addWidget(self.last_scan_label)
