@@ -71,13 +71,27 @@ class AutomationGUI(QMainWindow):
         self.splitter.setHandleWidth(6)
         self.splitter.setStyleSheet("QSplitter::handle { background-color: #000; }")
 
-        self.iphone_table = QTableWidget()
-        self._setup_table(self.iphone_table)
         self.android_table = QTableWidget()
         self._setup_table(self.android_table)
+        self.iphone_table = QTableWidget()
+        self._setup_table(self.iphone_table)
 
-        self.splitter.addWidget(self.iphone_table)
-        self.splitter.addWidget(self.android_table)
+        android_container = QWidget()
+        android_layout = QVBoxLayout()
+        android_layout.setContentsMargins(0, 0, 0, 0)
+        android_layout.addWidget(QLabel("\ud83d\udcf1 Android Devices"))
+        android_layout.addWidget(self.android_table)
+        android_container.setLayout(android_layout)
+
+        iphone_container = QWidget()
+        iphone_layout = QVBoxLayout()
+        iphone_layout.setContentsMargins(0, 0, 0, 0)
+        iphone_layout.addWidget(QLabel("\ud83c\udf4f iPhone Devices"))
+        iphone_layout.addWidget(self.iphone_table)
+        iphone_container.setLayout(iphone_layout)
+
+        self.splitter.addWidget(android_container)
+        self.splitter.addWidget(iphone_container)
 
         layout.addWidget(self.splitter)
 
@@ -96,7 +110,8 @@ class AutomationGUI(QMainWindow):
         table.setColumnCount(3)
         table.setHorizontalHeaderLabels(["#", "Nickname", "Actions"])
         hdr = table.horizontalHeader()
-        hdr.setSectionResizeMode(QHeaderView.Stretch)
+        hdr.setSectionResizeMode(QHeaderView.Interactive)
+        hdr.setStretchLastSection(True)
         hdr.setDefaultAlignment(Qt.AlignCenter)
         table.verticalHeader().setVisible(False)
         table.setAlternatingRowColors(True)
