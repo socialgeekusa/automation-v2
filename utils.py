@@ -22,7 +22,9 @@ def format_last_activity(ts: float | None) -> str:
 
 
 def detect_device_os(device):
-    if "iPhone" in device.get('name', ''):
+    """Return the device OS based on name or id length."""
+    name = device.get("name", "")
+    dev_id = device.get("id", "")
+    if "iphone" in name.lower() or len(dev_id) == 40:
         return "iPhone"
-    else:
-        return "Android"
+    return "Android"
