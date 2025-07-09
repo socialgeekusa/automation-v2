@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QLineEdit, QHBoxLayout,
     QMessageBox, QInputDialog, QSpinBox, QComboBox,
-    QGraphicsDropShadowEffect
+    QGraphicsDropShadowEffect, QFrame
 )
 from PyQt5.QtCore import QTimer, Qt
 import time
@@ -48,17 +48,22 @@ class AutomationGUI(QMainWindow):
         self.start_tab()
 
     class DeviceRow(QWidget):
-        def __init__(self, parent, device_id, name, counts, os_type):
+        def __init__(self, parent, index, device_id, name, counts, os_type):
             super().__init__()
             self.gui = parent
             self.device_id = device_id
             self.os_type = os_type
+            self.index = index
 
             row = QHBoxLayout()
             row.setContentsMargins(10, 10, 10, 10)
             row.setSpacing(10)
+            self.setFixedHeight(60)
+            self.setMinimumWidth(250)
 
-            row.addWidget(QLabel(device_id))
+            num_label = QLabel(self._num_emoji(index))
+            num_label.setFixedWidth(20)
+            row.addWidget(num_label)
 
             name_layout = QHBoxLayout()
             self.name_edit = QLineEdit(name)
@@ -104,7 +109,7 @@ class AutomationGUI(QMainWindow):
                 self.start_btn.setText("Running")
 
         def _format_counts(self, counts):
-            return f"TikTok: {counts.get('TikTok',0)} | Instagram: {counts.get('Instagram',0)}"
+            return f"TikTok: {counts.get('TikTok',0)} | IG: {counts.get('Instagram',0)}"
 
         def _activity_text(self):
             tt = self.gui.config.get_last_activity(self.device_id, "TikTok")
@@ -128,6 +133,21 @@ class AutomationGUI(QMainWindow):
             effect.setBlurRadius(8)
             effect.setOffset(0, 2)
             button.setGraphicsEffect(effect)
+
+        def _num_emoji(self, n):
+            mapping = {
+                1: "1️⃣",
+                2: "2️⃣",
+                3: "3️⃣",
+                4: "4️⃣",
+                5: "5️⃣",
+                6: "6️⃣",
+                7: "7️⃣",
+                8: "8️⃣",
+                9: "9️⃣",
+                10: "🔟",
+            }
+            return mapping.get(n, str(n))
 
         def save_name(self):
             new_name = self.name_edit.text().strip()[:30]
@@ -165,12 +185,13 @@ class AutomationGUI(QMainWindow):
         main_layout = QHBoxLayout()
         self.iphone_layout = QVBoxLayout()
         self.android_layout = QVBoxLayout()
+        main_layout.setSpacing(0)
 
-        iphone_label = QLabel("\ud83c\udf4f iPhones")
+        iphone_label = QLabel("\ud83c\udf4f iPhone Devices")
         iphone_label.setStyleSheet("font-weight: bold; font-size: 16px;")
         self.iphone_layout.addWidget(iphone_label)
 
-        android_label = QLabel("\ud83d\udcf1 Androids")
+        android_label = QLabel("\ud83d\udcf1 Android Devices")
         android_label.setStyleSheet("font-weight: bold; font-size: 16px;")
         self.android_layout.addWidget(android_label)
 
@@ -180,6 +201,10 @@ class AutomationGUI(QMainWindow):
         android_container.setLayout(self.android_layout)
 
         main_layout.addWidget(iphone_container)
+        divider = QFrame()
+        divider.setFrameShape(QFrame.VLine)
+        divider.setLineWidth(2)
+        main_layout.addWidget(divider)
         main_layout.addWidget(android_container)
 
         layout.addLayout(main_layout)
@@ -231,18 +256,33 @@ class AutomationGUI(QMainWindow):
             QMessageBox.information(self, "Device Scan", f"{len(added)} devices added. {len(removed)} devices removed.")
 
     def load_devices_ui(self):
+        iphone_idx = 1
+        android_idx = 1
         for device in self.config.devices_info:
-            row = self.DeviceRow(
-                self,
-                device.get("id"),
-                device.get("name", device.get("id")),
-                self.config.get_account_counts(device.get("id")),
-                utils.detect_device_os(device),
-            )
-            if utils.detect_device_os(device) == "iPhone":
+            counts = self.config.get_account_counts(device.get("id"))
+            os_type = utils.detect_device_os(device)
+            if os_type == "iPhone":
+                row = self.DeviceRow(
+                    self,
+                    iphone_idx,
+                    device.get("id"),
+                    device.get("name", device.get("id")),
+                    counts,
+                    os_type,
+                )
                 self.iphone_layout.addWidget(row)
+                iphone_idx += 1
             else:
+                row = self.DeviceRow(
+                    self,
+                    android_idx,
+                    device.get("id"),
+                    device.get("name", device.get("id")),
+                    counts,
+                    os_type,
+                )
                 self.android_layout.addWidget(row)
+                android_idx += 1
 
 
     def accounts_tab(self):

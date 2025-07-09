@@ -82,5 +82,6 @@ class InteractionManager:
             line = f"[{device_id}] {time.asctime()}: {action.upper()} {platform} {account} on {device_id}\n"
             with open(log_path, "a") as log:
                 log.write(line)
+            self.config.update_last_activity(device_id, platform)
             # here you’d call the driver’s methods, e.g. self.driver.swipe(...)
             time.sleep(random.uniform(min_delay, max_delay))

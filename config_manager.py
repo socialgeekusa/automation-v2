@@ -39,6 +39,9 @@ class ConfigManager:
         self.device_states: Dict[str, Dict] = self.load_json(self.state_file, default={})
         for dev in self.devices_info:
             dev["accounts"] = self._get_account_count(dev["id"])
+            counts = self.get_account_counts(dev["id"])
+            dev["tiktok"] = counts["TikTok"]
+            dev["instagram"] = counts["Instagram"]
         self._save_devices_info()
 
     def load_json(self, filepath, default=None):
@@ -82,6 +85,9 @@ class ConfigManager:
         for dev in self.devices_info:
             if dev["id"] == device_id:
                 dev["accounts"] = self._get_account_count(device_id)
+                counts = self.get_account_counts(device_id)
+                dev["tiktok"] = counts["TikTok"]
+                dev["instagram"] = counts["Instagram"]
                 self._save_devices_info()
                 break
 
@@ -115,6 +121,8 @@ class ConfigManager:
                 "id": device_id,
                 "name": new_name,
                 "accounts": self._get_account_count(device_id),
+                "tiktok": self.get_account_counts(device_id)["TikTok"],
+                "instagram": self.get_account_counts(device_id)["Instagram"],
             })
         self._save_devices_info()
 
@@ -122,7 +130,14 @@ class ConfigManager:
         if device_id not in self.devices:
             name = nickname or device_id
             self.devices[device_id] = name
-            self.devices_info.append({"id": device_id, "name": name, "accounts": self._get_account_count(device_id)})
+            counts = self.get_account_counts(device_id)
+            self.devices_info.append({
+                "id": device_id,
+                "name": name,
+                "accounts": self._get_account_count(device_id),
+                "tiktok": counts["TikTok"],
+                "instagram": counts["Instagram"],
+            })
             self._save_devices_info()
             self.set_device_status(device_id, "Idle")
 
