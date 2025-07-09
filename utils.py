@@ -22,21 +22,19 @@ def format_last_activity(ts: float | None) -> str:
 
 
 def detect_device_os(device):
-    """Return the device OS based on name or id heuristics.
+    """Determine the device OS based on its ID prefix.
 
-    Devices whose name contains "iphone" (case-insensitive) or whose ID is a
-    40-character string are treated as iPhones.  Additionally, if the device ID
-    consists solely of digits and contains 20 or more characters, it is
-    classified as an Android device.
+    Devices whose ID starts with ``Z`` are considered iPhones while
+    IDs beginning with ``0`` are treated as Androids. Any other ID
+    defaults to Android.
     """
 
-    name = device.get("name", "")
     dev_id = device.get("id", "")
 
-    if "iphone" in name.lower() or len(dev_id) == 40:
+    if dev_id.startswith("Z"):
         return "iPhone"
 
-    if dev_id.isdigit() and len(dev_id) >= 20:
+    if dev_id.startswith("0"):
         return "Android"
 
     return "Android"
