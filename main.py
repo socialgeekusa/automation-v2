@@ -107,8 +107,8 @@ class AutomationGUI(QMainWindow):
         self.refresh_devices()
 
     def _setup_table(self, table: QTableWidget):
-        table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(["#", "Nickname", "Actions"])
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(["#", "Nickname", "TikTok", "IG", "Actions"])
         hdr = table.horizontalHeader()
         hdr.setSectionResizeMode(QHeaderView.Interactive)
         hdr.setStretchLastSection(True)
@@ -131,7 +131,7 @@ class AutomationGUI(QMainWindow):
             return
         self.config.save_device_name(device_id, new_name)
 
-    def _add_device_row(self, table: QTableWidget, index: int, device_id: str, name: str):
+    def _add_device_row(self, table: QTableWidget, index: int, device_id: str, name: str, tiktok_count: int, ig_count: int):
         table.blockSignals(True)
         row = table.rowCount()
         table.insertRow(row)
@@ -139,6 +139,8 @@ class AutomationGUI(QMainWindow):
         name_item = QTableWidgetItem(name)
         name_item.setData(Qt.UserRole, device_id)
         table.setItem(row, 1, name_item)
+        table.setItem(row, 2, QTableWidgetItem(str(tiktok_count)))
+        table.setItem(row, 3, QTableWidgetItem(str(ig_count)))
 
         btn_start = QPushButton("Start")
         btn_manage = QPushButton("Manage")
@@ -156,7 +158,7 @@ class AutomationGUI(QMainWindow):
         hl.addWidget(btn_start)
         hl.addWidget(btn_manage)
         hl.addWidget(btn_delete)
-        table.setCellWidget(row, 2, action_widget)
+        table.setCellWidget(row, 4, action_widget)
         table.blockSignals(False)
 
     def start_device(self, device_id: str, button: QPushButton):
@@ -220,11 +222,13 @@ class AutomationGUI(QMainWindow):
         for device in self.config.devices_info:
             os_type = utils.detect_device_os(device)
             name = device.get("name", device.get("id"))
+            tiktok = device.get("tiktok", 0)
+            ig = device.get("instagram", 0)
             if os_type == "iPhone":
-                self._add_device_row(self.iphone_table, iphone_idx, device.get("id"), name)
+                self._add_device_row(self.iphone_table, iphone_idx, device.get("id"), name, tiktok, ig)
                 iphone_idx += 1
             else:
-                self._add_device_row(self.android_table, android_idx, device.get("id"), name)
+                self._add_device_row(self.android_table, android_idx, device.get("id"), name, tiktok, ig)
                 android_idx += 1
 
 
@@ -296,6 +300,7 @@ class AutomationGUI(QMainWindow):
         if ok and account:
             self.config.set_active_account(device_id, platform, account)
             self.load_accounts()
+            self.refresh_devices()
 
     def add_account(self, device_id, platform):
         account, ok = QInputDialog.getText(
@@ -306,6 +311,7 @@ class AutomationGUI(QMainWindow):
         if ok and account:
             self.config.add_account(device_id, platform, account)
             self.load_accounts()
+            self.refresh_devices()
 
     def remove_account(self, device_id, platform):
         accounts = self.config.accounts.get(device_id, {}).get(platform, {}).get("accounts", [])
@@ -323,6 +329,7 @@ class AutomationGUI(QMainWindow):
         if ok and account:
             self.config.remove_account(device_id, platform, account)
             self.load_accounts()
+            self.refresh_devices()
 
     def warmup_tab(self):
         tab = QWidget()
