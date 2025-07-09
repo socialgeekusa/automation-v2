@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
     QSplitter,
+    QDialog,
 )
 from PyQt5.QtCore import QTimer, Qt
 import time
@@ -30,6 +31,80 @@ from warmup_manager import WarmupManager
 from post_manager import PostManager
 from interaction_manager import InteractionManager
 from session_summary import SessionSummary
+
+
+class ManageDialog(QDialog):
+    """Dialog for managing a single device's accounts."""
+
+    def __init__(self, parent: "AutomationGUI", device_id: str):
+        super().__init__(parent)
+        self.gui = parent
+        self.device_id = device_id
+        self.setWindowTitle(f"Manage Device {device_id}")
+
+        self.tables = {}
+        layout = QVBoxLayout(self)
+
+        for platform in ("TikTok", "Instagram"):
+            layout.addWidget(QLabel(platform))
+            table = QTableWidget()
+            table.setColumnCount(2)
+            table.setHorizontalHeaderLabels(["Account", "Active"])
+            table.horizontalHeader().setStretchLastSection(True)
+            table.verticalHeader().setVisible(False)
+            table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            self.tables[platform] = table
+            layout.addWidget(table)
+
+            btn_row = QHBoxLayout()
+            add_btn = QPushButton(f"Add {platform}")
+            add_btn.clicked.connect(lambda _, p=platform: self.handle_add(p))
+            remove_btn = QPushButton(f"Remove {platform}")
+            remove_btn.clicked.connect(lambda _, p=platform: self.handle_remove(p))
+            active_btn = QPushButton(f"Set Active {platform}")
+            active_btn.clicked.connect(lambda _, p=platform: self.handle_active(p))
+            for b in (add_btn, remove_btn, active_btn):
+                btn_row.addWidget(b)
+            layout.addLayout(btn_row)
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
+
+        self.populate()
+
+    def populate(self):
+        """Load account info for both platforms into the tables."""
+        data = self.gui.config.accounts.get(self.device_id, {})
+        for platform, table in self.tables.items():
+            info = data.get(platform, {})
+            accounts = info.get("accounts", [])
+            active = info.get("active")
+            table.setRowCount(0)
+            for row, acc in enumerate(accounts):
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem(acc))
+                table.setItem(row, 1, QTableWidgetItem("Yes" if acc == active else ""))
+
+    def _refresh_all(self):
+        """Refresh tables and parent views."""
+        self.populate()
+        self.gui.load_accounts()
+        for table in (self.gui.android_table, self.gui.iphone_table):
+            table.setRowCount(0)
+        self.gui.load_devices_ui()
+
+    def handle_add(self, platform: str):
+        self.gui.add_account(self.device_id, platform)
+        self._refresh_all()
+
+    def handle_remove(self, platform: str):
+        self.gui.remove_account(self.device_id, platform)
+        self._refresh_all()
+
+    def handle_active(self, platform: str):
+        self.gui.choose_active_account(self.device_id, platform)
+        self._refresh_all()
 
 class AutomationGUI(QMainWindow):
     def __init__(self):
@@ -169,7 +244,10 @@ class AutomationGUI(QMainWindow):
         button.setText("Running")
 
     def manage_device(self, device_id: str):
-        QMessageBox.information(self, "Manage Device", "Feature coming soon")
+        dialog = ManageDialog(self, device_id)
+        dialog.exec_()
+        self.load_accounts()
+        self.refresh_devices()
 
     def delete_device(self, device_id: str):
         if (
@@ -300,7 +378,9 @@ class AutomationGUI(QMainWindow):
         if ok and account:
             self.config.set_active_account(device_id, platform, account)
             self.load_accounts()
-            self.refresh_devices()
+            for table in (self.android_table, self.iphone_table):
+                table.setRowCount(0)
+            self.load_devices_ui()
 
     def add_account(self, device_id, platform):
         account, ok = QInputDialog.getText(
@@ -311,7 +391,9 @@ class AutomationGUI(QMainWindow):
         if ok and account:
             self.config.add_account(device_id, platform, account)
             self.load_accounts()
-            self.refresh_devices()
+            for table in (self.android_table, self.iphone_table):
+                table.setRowCount(0)
+            self.load_devices_ui()
 
     def remove_account(self, device_id, platform):
         accounts = self.config.accounts.get(device_id, {}).get(platform, {}).get("accounts", [])
@@ -329,7 +411,9 @@ class AutomationGUI(QMainWindow):
         if ok and account:
             self.config.remove_account(device_id, platform, account)
             self.load_accounts()
-            self.refresh_devices()
+            for table in (self.android_table, self.iphone_table):
+                table.setRowCount(0)
+            self.load_devices_ui()
 
     def warmup_tab(self):
         tab = QWidget()
