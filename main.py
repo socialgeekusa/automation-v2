@@ -182,20 +182,20 @@ class AutomationGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
 
-        # 📦 NEW Devices Tab Layout: Vertical Split (Phase 1.3)
+        # 📦 Devices Tab Layout: T Chart Split
         vertical_split_layout = QHBoxLayout()
 
-        # 🍏 Left Column: iPhone Devices
-        self.iphone_layout = QVBoxLayout()
-        iphone_label = QLabel("\ud83c\udf4f iPhone Devices")
-        iphone_label.setStyleSheet("font-weight: bold; font-size: 16px;")
-        self.iphone_layout.addWidget(iphone_label)
-
-        # 📱 Right Column: Android Devices
+        # 🤖 Left Column: Android Devices
         self.android_layout = QVBoxLayout()
         android_label = QLabel("\ud83d\udcf1 Android Devices")
         android_label.setStyleSheet("font-weight: bold; font-size: 16px;")
         self.android_layout.addWidget(android_label)
+
+        # 🍏 Right Column: iPhone Devices
+        self.iphone_layout = QVBoxLayout()
+        iphone_label = QLabel("\ud83c\udf4f iPhone Devices")
+        iphone_label.setStyleSheet("font-weight: bold; font-size: 16px;")
+        self.iphone_layout.addWidget(iphone_label)
 
         # 🔥 Solid black vertical divider
         divider = QFrame()
@@ -204,9 +204,9 @@ class AutomationGUI(QMainWindow):
         divider.setStyleSheet("background-color: black; width: 2px;")
 
         # 🖤 Add layouts and divider to main layout
-        vertical_split_layout.addLayout(self.iphone_layout)
-        vertical_split_layout.addWidget(divider)
         vertical_split_layout.addLayout(self.android_layout)
+        vertical_split_layout.addWidget(divider)
+        vertical_split_layout.addLayout(self.iphone_layout)
 
         # 🔄 Apply layout
         layout.addLayout(vertical_split_layout)
