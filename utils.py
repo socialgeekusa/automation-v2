@@ -19,3 +19,10 @@ def format_last_activity(ts: float | None) -> str:
     if dt.date() == datetime.today().date():
         return f"{label} (Today)"
     return f"{label} ({dt.date()})"
+
+
+def detect_device_os(device):
+    if "iPhone" in device.get('name', ''):
+        return "iPhone"
+    else:
+        return "Android"

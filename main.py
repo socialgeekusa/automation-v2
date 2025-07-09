@@ -85,7 +85,7 @@ class AutomationGUI(QMainWindow):
             row.addWidget(self.start_btn)
 
             manage_btn = QPushButton("Manage")
-            manage_btn.setStyleSheet("background-color: #FFA500; border-radius:4px; padding:4px")
+            manage_btn.setStyleSheet("background-color: orange; color: white;")
             manage_btn.clicked.connect(self.manage_device)
             self._apply_shadow(manage_btn)
             row.addWidget(manage_btn)
@@ -161,29 +161,28 @@ class AutomationGUI(QMainWindow):
         tab = QWidget()
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
-        layout.addWidget(QLabel("📱 Connected Devices:"))
 
-        columns = QHBoxLayout()
-        columns.setSpacing(20)
-        columns.setContentsMargins(10, 0, 10, 0)
-
-        self.android_container = QWidget()
+        main_layout = QHBoxLayout()
+        self.iphone_layout = QVBoxLayout()
         self.android_layout = QVBoxLayout()
-        self.android_container.setLayout(self.android_layout)
-        android_col = QVBoxLayout()
-        android_col.addWidget(QLabel("Androids"))
-        android_col.addWidget(self.android_container)
-        columns.addLayout(android_col, 1)
 
-        self.ios_container = QWidget()
-        self.ios_layout = QVBoxLayout()
-        self.ios_container.setLayout(self.ios_layout)
-        ios_col = QVBoxLayout()
-        ios_col.addWidget(QLabel("iPhones"))
-        ios_col.addWidget(self.ios_container)
-        columns.addLayout(ios_col, 1)
+        iphone_label = QLabel("\ud83c\udf4f iPhones")
+        iphone_label.setStyleSheet("font-weight: bold; font-size: 16px;")
+        self.iphone_layout.addWidget(iphone_label)
 
-        layout.addLayout(columns)
+        android_label = QLabel("\ud83d\udcf1 Androids")
+        android_label.setStyleSheet("font-weight: bold; font-size: 16px;")
+        self.android_layout.addWidget(android_label)
+
+        iphone_container = QWidget()
+        iphone_container.setLayout(self.iphone_layout)
+        android_container = QWidget()
+        android_container.setLayout(self.android_layout)
+
+        main_layout.addWidget(iphone_container)
+        main_layout.addWidget(android_container)
+
+        layout.addLayout(main_layout)
 
         self.last_scan_label = QLabel("Last Scanned: --:--:--")
         layout.addWidget(self.last_scan_label)
@@ -220,32 +219,30 @@ class AutomationGUI(QMainWindow):
         for dev in scanned:
             self.config.update_device_accounts(dev)
 
-        for layout in [self.android_layout, self.ios_layout]:
+        for layout in [self.android_layout, self.iphone_layout]:
             while layout.count():
                 item = layout.takeAt(0)
                 if item and item.widget():
                     item.widget().deleteLater()
 
-        all_devices = list(self.config.devices.keys())
-        ios_rows = []
-        android_rows = []
-        for dev in all_devices:
-            name = self.config.devices.get(dev, dev)
-            counts = self.config.get_account_counts(dev)
-            os_type = utils.detect_os(dev)
-            row = self.DeviceRow(self, dev, name, counts, os_type)
-            if os_type == "iOS":
-                ios_rows.append((name.lower(), row))
-            else:
-                android_rows.append((name.lower(), row))
-
-        for _, row in sorted(ios_rows, key=lambda x: x[0]):
-            self.ios_layout.addWidget(row)
-        for _, row in sorted(android_rows, key=lambda x: x[0]):
-            self.android_layout.addWidget(row)
+        self.load_devices_ui()
 
         if added or removed:
             QMessageBox.information(self, "Device Scan", f"{len(added)} devices added. {len(removed)} devices removed.")
+
+    def load_devices_ui(self):
+        for device in self.config.devices_info:
+            row = self.DeviceRow(
+                self,
+                device.get("id"),
+                device.get("name", device.get("id")),
+                self.config.get_account_counts(device.get("id")),
+                utils.detect_device_os(device),
+            )
+            if utils.detect_device_os(device) == "iPhone":
+                self.iphone_layout.addWidget(row)
+            else:
+                self.android_layout.addWidget(row)
 
 
     def accounts_tab(self):
