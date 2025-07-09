@@ -172,3 +172,12 @@ class ConfigManager:
 
     def get_account_settings(self, username):
         return self.account_settings.get(username, {})
+
+
+def update_device(device_id, key, value):
+    cm = ConfigManager()
+    for device in cm.devices_info:
+        if device.get('id') == device_id:
+            device[key] = value
+            cm._save_devices_info()
+            break
