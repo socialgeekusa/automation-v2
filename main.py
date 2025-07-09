@@ -4,7 +4,8 @@ import re
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton,
     QLabel, QTabWidget, QTextEdit, QLineEdit, QHBoxLayout,
-    QMessageBox, QInputDialog, QSpinBox, QComboBox
+    QMessageBox, QInputDialog, QSpinBox, QComboBox,
+    QGraphicsDropShadowEffect
 )
 from PyQt5.QtCore import QTimer, Qt
 import time
@@ -19,7 +20,7 @@ from session_summary import SessionSummary
 class AutomationGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Automation V7.1 - Ultimate Agency Edition")
+        self.setWindowTitle("XO v1.1 - Ultimate Agency Edition")
         self.setGeometry(100, 100, 1400, 850)
 
         self.config = ConfigManager()
@@ -34,9 +35,6 @@ class AutomationGUI(QMainWindow):
 
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
-        branding = QLabel("XO v1.1 – Ultimate Agency Edition")
-        branding.setStyleSheet("font-weight: bold")
-        self.tabs.setCornerWidget(branding, Qt.TopLeftCorner)
 
         self.init_tabs()
         self.show()
@@ -57,7 +55,7 @@ class AutomationGUI(QMainWindow):
             self.os_type = os_type
 
             row = QHBoxLayout()
-            row.setContentsMargins(5, 5, 5, 5)
+            row.setContentsMargins(10, 10, 10, 10)
             row.setSpacing(10)
 
             row.addWidget(QLabel(device_id))
@@ -81,22 +79,25 @@ class AutomationGUI(QMainWindow):
             row.addWidget(self.activity_label)
 
             self.start_btn = QPushButton("Start")
-            self.start_btn.setStyleSheet("background-color: green; border-radius:4px")
+            self.start_btn.setStyleSheet("background-color: green; border-radius:4px; padding:4px")
             self.start_btn.clicked.connect(self.start_device)
+            self._apply_shadow(self.start_btn)
             row.addWidget(self.start_btn)
 
             manage_btn = QPushButton("Manage")
-            manage_btn.setStyleSheet("background-color: #FFA500; border-radius:4px")
+            manage_btn.setStyleSheet("background-color: #FFA500; border-radius:4px; padding:4px")
             manage_btn.clicked.connect(self.manage_device)
+            self._apply_shadow(manage_btn)
             row.addWidget(manage_btn)
 
             del_btn = QPushButton("Delete")
-            del_btn.setStyleSheet("background-color: red; border-radius:4px")
+            del_btn.setStyleSheet("background-color: red; border-radius:4px; padding:4px")
             del_btn.clicked.connect(self.delete_device)
+            self._apply_shadow(del_btn)
             row.addWidget(del_btn)
 
             self.setLayout(row)
-            self.setStyleSheet("border:1px solid #ccc; border-radius:8px")
+            self.setStyleSheet("border:1px solid #ccc; border-radius:8px; padding:8px; margin-bottom:6px")
             self.update_status_badge()
             if self.gui.config.get_device_status(self.device_id) == "Active":
                 self.start_btn.setStyleSheet("background-color: blue; border-radius:4px")
@@ -121,6 +122,12 @@ class AutomationGUI(QMainWindow):
                 "Offline": "red",
             }.get(status, "gray")
             self.status_badge.setStyleSheet(f"border-radius:5px;background-color:{color}")
+
+        def _apply_shadow(self, button):
+            effect = QGraphicsDropShadowEffect(self)
+            effect.setBlurRadius(8)
+            effect.setOffset(0, 2)
+            button.setGraphicsEffect(effect)
 
         def save_name(self):
             new_name = self.name_edit.text().strip()[:30]
@@ -153,16 +160,12 @@ class AutomationGUI(QMainWindow):
     def devices_tab(self):
         tab = QWidget()
         layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
         layout.addWidget(QLabel("📱 Connected Devices:"))
 
         columns = QHBoxLayout()
-        self.ios_container = QWidget()
-        self.ios_layout = QVBoxLayout()
-        self.ios_container.setLayout(self.ios_layout)
-        ios_col = QVBoxLayout()
-        ios_col.addWidget(QLabel("iPhones"))
-        ios_col.addWidget(self.ios_container)
-        columns.addLayout(ios_col)
+        columns.setSpacing(20)
+        columns.setContentsMargins(10, 0, 10, 0)
 
         self.android_container = QWidget()
         self.android_layout = QVBoxLayout()
@@ -170,7 +173,15 @@ class AutomationGUI(QMainWindow):
         android_col = QVBoxLayout()
         android_col.addWidget(QLabel("Androids"))
         android_col.addWidget(self.android_container)
-        columns.addLayout(android_col)
+        columns.addLayout(android_col, 1)
+
+        self.ios_container = QWidget()
+        self.ios_layout = QVBoxLayout()
+        self.ios_container.setLayout(self.ios_layout)
+        ios_col = QVBoxLayout()
+        ios_col.addWidget(QLabel("iPhones"))
+        ios_col.addWidget(self.ios_container)
+        columns.addLayout(ios_col, 1)
 
         layout.addLayout(columns)
 
@@ -209,7 +220,7 @@ class AutomationGUI(QMainWindow):
         for dev in scanned:
             self.config.update_device_accounts(dev)
 
-        for layout in [self.ios_layout, self.android_layout]:
+        for layout in [self.android_layout, self.ios_layout]:
             while layout.count():
                 item = layout.takeAt(0)
                 if item and item.widget():
