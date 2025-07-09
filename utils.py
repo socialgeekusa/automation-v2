@@ -24,17 +24,17 @@ def format_last_activity(ts: float | None) -> str:
 def detect_device_os(device):
     """Determine the device OS based on its ID prefix.
 
-    Devices whose ID starts with ``Z`` are considered iPhones while
-    IDs beginning with ``0`` are treated as Androids. Any other ID
+    Devices whose ID starts with ``0`` are considered iPhones while
+    IDs beginning with ``Z`` are treated as Androids. Any other ID
     defaults to Android.
     """
 
     dev_id = device.get("id", "")
 
-    if dev_id.startswith("Z"):
+    if dev_id.startswith("0"):
         return "iPhone"
 
-    if dev_id.startswith("0"):
+    if dev_id.startswith("Z"):
         return "Android"
 
     return "Android"
