@@ -26,9 +26,10 @@ The GUI allows you to manage devices, accounts and start automation workflows. C
 
 ## Running Tests
 
-Basic tests for the `ConfigManager` class are provided using `pytest`. To execute them:
+Basic tests for the `ConfigManager` class are provided using `pytest`. Running
+`pip install -r requirements.txt` installs all dependencies, including
+`pytest`. To execute the tests:
 
 ```bash
-pip install pytest  # if not already installed
 pytest
 ```
