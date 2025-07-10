@@ -3,6 +3,7 @@ import threading
 import time
 import logging
 import os
+import shutil
 from typing import Dict
 
 import utils
@@ -110,15 +111,41 @@ class AppiumDriver:
                 bundle = self.ios_bundles.get(platform)
                 if not bundle:
                     raise ValueError(f"Unknown app platform: {platform}")
-                subprocess.check_call([
-                    "idevicedebug",
-                    "-u",
-                    device_id,
-                    "run",
-                    bundle,
-                ])
-                logger.info(f"Opened {platform} on iPhone device {device_id}")
-            return True
+
+                idevicedebug = shutil.which("idevicedebug")
+                if idevicedebug:
+                    subprocess.check_call([
+                        idevicedebug,
+                        "-u",
+                        device_id,
+                        "run",
+                        bundle,
+                    ])
+                    logger.info(
+                        f"Opened {platform} on iPhone device {device_id} using idevicedebug"
+                    )
+                else:
+                    logger.error(
+                        "idevicedebug not found. Attempting to use idevice-app-runner as a fallback."
+                    )
+                    app_runner = shutil.which("idevice-app-runner")
+                    if app_runner:
+                        subprocess.check_call([
+                            app_runner,
+                            "--udid",
+                            device_id,
+                            "--start",
+                            bundle,
+                        ])
+                        logger.info(
+                            f"Opened {platform} on iPhone device {device_id} using idevice-app-runner"
+                        )
+                    else:
+                        logger.error(
+                            "Neither idevicedebug nor idevice-app-runner is installed."
+                        )
+                        return False
+                return True
         except Exception as e:
             logger.error(f"Failed to open {platform} on {device_id}: {e}")
             return False
