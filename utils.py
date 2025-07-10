@@ -3,8 +3,12 @@ from datetime import datetime
 
 
 def detect_os(device_id: str) -> str:
-    """Simple OS detection based on device id length."""
-    return "iOS" if len(device_id) == 40 else "Android"
+    """Simple OS detection based on device id length.
+
+    Returns ``"iPhone"`` or ``"Android"`` to match the values produced by
+    :func:`detect_device_os`.
+    """
+    return "iPhone" if len(device_id) == 40 else "Android"
 
 
 def timestamp_now() -> float:
