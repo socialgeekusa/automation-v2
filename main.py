@@ -359,6 +359,11 @@ class AutomationGUI(QMainWindow):
         self.accounts_container.setLayout(self.accounts_layout)
         layout.addWidget(self.accounts_container)
 
+        # Area to embed per-account settings widgets
+        self.account_settings_area = QWidget()
+        self.account_settings_area.setLayout(QVBoxLayout())
+        layout.addWidget(self.account_settings_area)
+
         refresh_btn = QPushButton("Refresh Accounts")
         refresh_btn.clicked.connect(self.load_accounts)
         layout.addWidget(refresh_btn)
@@ -455,15 +460,19 @@ class AutomationGUI(QMainWindow):
             self.load_devices_ui()
 
     def open_account_settings(self, device_id, platform, username):
-        """Open a dialog to edit per-account settings."""
+        """Show account settings widget within the Accounts tab."""
         if hasattr(self, "accounts_tab_widget"):
             idx = self.tabs.indexOf(self.accounts_tab_widget)
             if idx != -1:
                 self.tabs.setCurrentIndex(idx)
 
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"Settings for {username}")
-        layout = QVBoxLayout(dialog)
+        # clear any existing settings widgets
+        layout = self.account_settings_area.layout()
+        for i in reversed(range(layout.count())):
+            item = layout.takeAt(i)
+            if item and item.widget():
+                item.widget().deleteLater()
+
         layout.addWidget(QLabel(f"Edit settings for {platform} account {username} on {device_id}"))
 
         settings_widget = AccountSettingsWidget(username, self.config, self.warmup_manager)
@@ -474,19 +483,24 @@ class AutomationGUI(QMainWindow):
 
         btn_row = QHBoxLayout()
         save_btn = QPushButton("Save")
-        cancel_btn = QPushButton("Cancel")
+        close_btn = QPushButton("Close")
         btn_row.addWidget(save_btn)
-        btn_row.addWidget(cancel_btn)
+        btn_row.addWidget(close_btn)
         layout.addLayout(btn_row)
 
         def save():
             self.config.set_account_settings(username, settings_widget.get_settings())
-            dialog.accept()
+
+        def close():
+            for i in reversed(range(layout.count())):
+                item = layout.takeAt(i)
+                if item and item.widget():
+                    item.widget().deleteLater()
 
         save_btn.clicked.connect(save)
-        cancel_btn.clicked.connect(dialog.reject)
+        close_btn.clicked.connect(close)
 
-        dialog.exec_()
+        self.current_account_settings_widget = settings_widget
 
 
     def global_settings_tab(self):
