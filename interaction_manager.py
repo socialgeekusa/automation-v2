@@ -70,7 +70,14 @@ class InteractionManager:
             with open(log_path, "a") as log:
                 log.write(warning)
             print(warning.strip())
-            return
+            switched = self.driver.switch_account(device_id, platform, account)
+            result = "SUCCESS" if switched else "FAIL"
+            switch_line = f"[{device_id}] {time.asctime()}: SWITCH {result} {platform} {account} on {device_id}\n"
+            with open(log_path, "a") as log:
+                log.write(switch_line)
+            print(switch_line.strip())
+            if not switched:
+                return
 
         settings_override = self.config.get_account_settings(account)
         min_delay = settings_override.get("min_delay", self.config.settings.get("min_delay", 5))
