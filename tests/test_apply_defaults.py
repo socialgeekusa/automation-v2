@@ -64,3 +64,46 @@ def test_apply_defaults_platform_filter(tmp_path, monkeypatch):
 
     gui.close()
     app.quit()
+
+
+def test_apply_defaults_no_popup(tmp_path, monkeypatch):
+    gui, app = create_gui(tmp_path)
+    gui.config.add_device('dev1')
+    gui.config.add_account('dev1', 'TikTok', 'user')
+
+    monkeypatch.setattr(gui.warmup_manager, 'is_warmup_active', lambda u: False)
+    called = []
+
+    def fake_info(*a, **k):
+        called.append(True)
+
+    monkeypatch.setattr(QMessageBox, 'information', fake_info)
+
+    gui.apply_defaults_to_all(show_popup=False)
+
+    assert not called
+
+    gui.close()
+    app.quit()
+
+
+def test_run_automation_applies_defaults(tmp_path, monkeypatch):
+    gui, app = create_gui(tmp_path)
+
+    recorded = {}
+
+    def fake_apply_defaults(platforms=None, show_popup=True):
+        recorded['show_popup'] = show_popup
+
+    monkeypatch.setattr(gui, 'apply_defaults_to_all', fake_apply_defaults)
+    monkeypatch.setattr(gui.session_summary, 'show_summary', lambda: None)
+    monkeypatch.setattr(gui.interaction_manager, 'run', lambda: None)
+    monkeypatch.setattr(gui.post_manager, 'run', lambda: None)
+    monkeypatch.setattr(QMessageBox, 'information', lambda *a, **k: None)
+
+    gui.run_automation()
+
+    assert recorded.get('show_popup') is False
+
+    gui.close()
+    app.quit()
