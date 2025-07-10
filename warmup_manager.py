@@ -11,6 +11,8 @@ class WarmupManager:
         self.active = False
         self.threads = []
         self.progress_file = os.path.join("Config", "warmup_progress.json")
+        # progress is stored per username to allow multiple accounts per device
+        # using independent warmup schedules
         self.progress = self._load_progress()
         self.total_days = 7
         self.paused = False
@@ -29,13 +31,17 @@ class WarmupManager:
         with open(self.progress_file, "w") as f:
             json.dump(self.progress, f, indent=4)
 
-    def get_progress(self, device_id=None):
-        """Return warmup progress for a specific device or all devices."""
+    def get_progress(self, username=None):
+        """Return warmup progress for a specific account or all accounts."""
         # Reload progress from disk in case other threads updated it
         self.progress = self._load_progress()
-        if device_id is None:
+        if username is None:
             return dict(self.progress)
-        return self.progress.get(device_id, 0)
+        return self.progress.get(username, 0)
+
+    def is_warmup_active(self, username: str) -> bool:
+        """Check if warmup should still run for the given username."""
+        return self.get_progress(username) < self.total_days
 
     def start_all_warmup(self):
         """
@@ -68,24 +74,28 @@ class WarmupManager:
         self.paused = False
 
     def _warmup_device_loop(self, device_id):
-        """
-        Loop performing warmup actions on a device until stopped.
-        """
-        day = self.progress.get(device_id, 0)
-        while self.active and day < self.total_days:
+        """Loop performing warmup actions on a device until stopped."""
+        while self.active:
             if self.paused:
                 time.sleep(1)
                 continue
+
             account_data = self.config.accounts.get(device_id, {})
+            all_done = True
             for platform in ["TikTok", "Instagram"]:
                 platform_info = account_data.get(platform, {})
                 active_account = platform_info.get("active")
-                if active_account:
+                if not active_account:
+                    continue
+                day = self.progress.get(active_account, 0)
+                if day < self.total_days:
+                    all_done = False
                     self.perform_warmup_actions(device_id, platform, active_account)
-            # Wait 1 minute before next warmup cycle
-            day += 1
-            self.progress[device_id] = day
-            self._save_progress()
+                    self.progress[active_account] = day + 1
+                    self._save_progress()
+
+            if all_done:
+                break
             time.sleep(60)
 
     def perform_warmup_actions(self, device_id, platform, account):

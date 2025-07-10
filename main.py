@@ -111,6 +111,42 @@ class ManageDialog(QDialog):
         self.gui.choose_active_account(self.device_id, platform)
         self._refresh_all()
 
+class AccountSettingsWidget(QWidget):
+    """Widget for editing per-account settings."""
+
+    def __init__(self, username: str, config: ConfigManager, warmup: WarmupManager):
+        super().__init__()
+        self.username = username
+        self.config = config
+        self.warmup = warmup
+
+        layout = QVBoxLayout(self)
+
+        min_layout = QHBoxLayout()
+        min_layout.addWidget(QLabel("Min Delay (s):"))
+        self.min_spin = QSpinBox()
+        self.min_spin.setRange(0, 120)
+        min_layout.addWidget(self.min_spin)
+        layout.addLayout(min_layout)
+
+        max_layout = QHBoxLayout()
+        max_layout.addWidget(QLabel("Max Delay (s):"))
+        self.max_spin = QSpinBox()
+        self.max_spin.setRange(0, 120)
+        max_layout.addWidget(self.max_spin)
+        layout.addLayout(max_layout)
+
+        current = self.config.get_account_settings(username)
+        self.min_spin.setValue(current.get("min_delay", self.config.settings.get("min_delay", 5)))
+        self.max_spin.setValue(current.get("max_delay", self.config.settings.get("max_delay", 15)))
+
+        if self.warmup.is_warmup_active(username):
+            self.min_spin.setEnabled(False)
+            self.max_spin.setEnabled(False)
+
+    def get_settings(self):
+        return {"min_delay": self.min_spin.value(), "max_delay": self.max_spin.value()}
+
 class AutomationGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -123,8 +159,6 @@ class AutomationGUI(QMainWindow):
         self.post_manager = PostManager(self.driver, self.config)
         self.interaction_manager = InteractionManager(self.driver, self.config)
         self.session_summary = SessionSummary()
-        self.warmup_labels = {}
-        self.warmup_timer = QTimer()
         self.logs_by_device = {}
 
         self.tabs = QTabWidget()
@@ -136,7 +170,6 @@ class AutomationGUI(QMainWindow):
     def init_tabs(self):
         self.devices_tab()
         self.accounts_tab()
-        self.warmup_tab()
         self.global_settings_tab()
         self.logs_tab()
         self.start_tab()
@@ -428,28 +461,16 @@ class AutomationGUI(QMainWindow):
             if idx != -1:
                 self.tabs.setCurrentIndex(idx)
 
-        current = self.config.get_account_settings(username)
-
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Settings for {username}")
         layout = QVBoxLayout(dialog)
         layout.addWidget(QLabel(f"Edit settings for {platform} account {username} on {device_id}"))
 
-        min_layout = QHBoxLayout()
-        min_layout.addWidget(QLabel("Min Delay (s):"))
-        min_spin = QSpinBox()
-        min_spin.setRange(0, 120)
-        min_spin.setValue(current.get("min_delay", self.config.settings.get("min_delay", 5)))
-        min_layout.addWidget(min_spin)
-        layout.addLayout(min_layout)
+        settings_widget = AccountSettingsWidget(username, self.config, self.warmup_manager)
+        layout.addWidget(settings_widget)
 
-        max_layout = QHBoxLayout()
-        max_layout.addWidget(QLabel("Max Delay (s):"))
-        max_spin = QSpinBox()
-        max_spin.setRange(0, 120)
-        max_spin.setValue(current.get("max_delay", self.config.settings.get("max_delay", 15)))
-        max_layout.addWidget(max_spin)
-        layout.addLayout(max_layout)
+        if self.warmup_manager.is_warmup_active(username):
+            layout.addWidget(QLabel("Warmup active: delay overrides are disabled."))
 
         btn_row = QHBoxLayout()
         save_btn = QPushButton("Save")
@@ -459,10 +480,7 @@ class AutomationGUI(QMainWindow):
         layout.addLayout(btn_row)
 
         def save():
-            self.config.set_account_settings(
-                username,
-                {"min_delay": min_spin.value(), "max_delay": max_spin.value()},
-            )
+            self.config.set_account_settings(username, settings_widget.get_settings())
             dialog.accept()
 
         save_btn.clicked.connect(save)
@@ -470,44 +488,6 @@ class AutomationGUI(QMainWindow):
 
         dialog.exec_()
 
-    def warmup_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("🔥 Warmup Phase Control:"))
-
-        self.warmup_container = QWidget()
-        self.warmup_layout = QVBoxLayout()
-        self.warmup_container.setLayout(self.warmup_layout)
-        layout.addWidget(self.warmup_container)
-
-        warmup_btn = QPushButton("Start Warmup For All")
-        warmup_btn.clicked.connect(self.warmup_manager.start_all_warmup)
-        layout.addWidget(warmup_btn)
-
-        tab.setLayout(layout)
-        self.tabs.addTab(tab, "Warmup")
-        self.load_warmup_progress()
-        self.warmup_timer.timeout.connect(self.load_warmup_progress)
-        self.warmup_timer.start(5000)
-
-    def load_warmup_progress(self):
-        for i in reversed(range(self.warmup_layout.count())):
-            item = self.warmup_layout.takeAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-
-        progress = self.warmup_manager.get_progress()
-        for device_id in self.config.accounts:
-            nickname = self.config.devices.get(device_id, device_id)
-            row = QHBoxLayout()
-            row.addWidget(QLabel(f"{nickname} ({device_id})"))
-            day = progress.get(device_id, 0)
-            label = QLabel(f"Day {day} of {self.warmup_manager.total_days}")
-            row.addWidget(label)
-            self.warmup_labels[device_id] = label
-            container = QWidget()
-            container.setLayout(row)
-            self.warmup_layout.addWidget(container)
 
     def global_settings_tab(self):
         tab = QWidget()
