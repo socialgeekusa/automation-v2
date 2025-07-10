@@ -55,6 +55,8 @@ class PostManager:
                     accounts = self.config.accounts.get(device_id, {}).get(platform, {})
                     active_account = accounts.get("active")
                     if active_account:
+                        self.driver.start_session(device_id, platform)
+                        self.driver.open_app(device_id, platform)
                         self.post_draft(device_id, platform, active_account)
                         delay = self._calculate_delay(active_account)
                         time.sleep(delay)
