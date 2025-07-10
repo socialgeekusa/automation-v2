@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QTimer, Qt
 import time
 import random
-from config_manager import ConfigManager
+from config_manager import ConfigManager, SLOW_HUMAN_PRESET
 import utils
 from appium_driver import AppiumDriver
 from warmup_manager import WarmupManager
@@ -562,6 +562,10 @@ class AutomationGUI(QMainWindow):
 
         layout.addLayout(delay_layout)
 
+        preset_btn = QPushButton("Apply Slow Human Preset")
+        preset_btn.clicked.connect(lambda: self.apply_preset(SLOW_HUMAN_PRESET))
+        layout.addWidget(preset_btn)
+
         self.range_spins = {}
 
         def add_range(label, key, max_val):
@@ -651,6 +655,22 @@ class AutomationGUI(QMainWindow):
     def update_draft_setting(self):
         self.config.settings['draft_posts'] = self.draft_checkbox.isChecked()
         self.config.save_json(self.config.settings_file, self.config.settings)
+
+    def apply_preset(self, preset: dict):
+        """Apply a configuration preset and refresh widgets."""
+        self.config.settings.update(preset)
+        self.config.save_json(self.config.settings_file, self.config.settings)
+
+        self.min_delay_spin.setValue(self.config.settings.get('min_delay', 5))
+        self.max_delay_spin.setValue(self.config.settings.get('max_delay', 15))
+
+        ranges = self.config.settings.get('interaction_ranges', {})
+        for key, (min_spin, max_spin) in self.range_spins.items():
+            vals = ranges.get(key, [0, 0])
+            min_spin.setValue(vals[0])
+            max_spin.setValue(vals[1])
+
+        self.draft_checkbox.setChecked(self.config.settings.get('draft_posts', False))
 
     def apply_defaults_to_all(self, platforms=None, show_popup=True):
         """Apply global defaults to all accounts optionally filtered by platform.

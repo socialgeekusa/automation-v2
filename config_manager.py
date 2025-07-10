@@ -3,6 +3,25 @@ import os
 from typing import Dict, Optional
 import utils
 
+# Preset of conservative settings mimicking slow human behaviour
+SLOW_HUMAN_PRESET = {
+    "min_delay": 20,
+    "max_delay": 40,
+    "interaction_ranges": {
+        "likes": [1, 3],
+        "follows": [1, 2],
+        "comments": [0, 1],
+        "shares": [0, 1],
+        "saves": [0, 1],
+        "watch_time": [5, 15],
+        "scroll_duration": [5, 10],
+        "story_interactions": [0, 2],
+        "dms": [0, 1],
+        "daily_posts": [0, 1],
+    },
+    "draft_posts": False,
+}
+
 class ConfigManager:
     def __init__(self):
         self.base_path = os.path.abspath(os.path.dirname(__file__))
