@@ -12,6 +12,7 @@ class DummyDriver:
         self.verify_result = verify_result
         self.switch_called = False
         self.open_called = False
+        self.open_draft_called = False
         self.start_called = False
 
     def start_session(self, device_id, platform):
@@ -19,6 +20,9 @@ class DummyDriver:
 
     def open_app(self, device_id, platform):
         self.open_called = True
+
+    def open_first_draft(self, device_id, platform):
+        self.open_draft_called = True
 
     def verify_current_account(self, device_id, platform, username):
         return self.verify_result
@@ -87,6 +91,19 @@ def test_post_loop_invokes_open_and_switch(tmp_path, monkeypatch):
 
     assert driver.open_called
     assert driver.switch_called
+
+
+def test_post_draft_invokes_open_first_draft(tmp_path):
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    driver = DummyDriver(verify_result=True)
+    config = DummyConfig()
+    pm = PostManager(driver, config)
+
+    pm.post_draft("dev", "TikTok", "user")
+    os.chdir(cwd)
+
+    assert driver.open_draft_called
 
 
 def test_interaction_loop_invokes_open_and_switch(tmp_path, monkeypatch):
