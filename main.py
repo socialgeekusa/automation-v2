@@ -53,6 +53,11 @@ class ManageDialog(QDialog):
             table.horizontalHeader().setStretchLastSection(True)
             table.verticalHeader().setVisible(False)
             table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            table.itemDoubleClicked.connect(
+                lambda item, p=platform: self.gui.open_account_settings(
+                    self.device_id, p, item.text()
+                )
+            )
             self.tables[platform] = table
             layout.addWidget(table)
 
@@ -312,6 +317,7 @@ class AutomationGUI(QMainWindow):
 
     def accounts_tab(self):
         tab = QWidget()
+        self.accounts_tab_widget = tab
         layout = QVBoxLayout()
         layout.addWidget(QLabel("🔑 Accounts per Device:"))
 
@@ -414,6 +420,55 @@ class AutomationGUI(QMainWindow):
             for table in (self.android_table, self.iphone_table):
                 table.setRowCount(0)
             self.load_devices_ui()
+
+    def open_account_settings(self, device_id, platform, username):
+        """Open a dialog to edit per-account settings."""
+        if hasattr(self, "accounts_tab_widget"):
+            idx = self.tabs.indexOf(self.accounts_tab_widget)
+            if idx != -1:
+                self.tabs.setCurrentIndex(idx)
+
+        current = self.config.get_account_settings(username)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Settings for {username}")
+        layout = QVBoxLayout(dialog)
+        layout.addWidget(QLabel(f"Edit settings for {platform} account {username} on {device_id}"))
+
+        min_layout = QHBoxLayout()
+        min_layout.addWidget(QLabel("Min Delay (s):"))
+        min_spin = QSpinBox()
+        min_spin.setRange(0, 120)
+        min_spin.setValue(current.get("min_delay", self.config.settings.get("min_delay", 5)))
+        min_layout.addWidget(min_spin)
+        layout.addLayout(min_layout)
+
+        max_layout = QHBoxLayout()
+        max_layout.addWidget(QLabel("Max Delay (s):"))
+        max_spin = QSpinBox()
+        max_spin.setRange(0, 120)
+        max_spin.setValue(current.get("max_delay", self.config.settings.get("max_delay", 15)))
+        max_layout.addWidget(max_spin)
+        layout.addLayout(max_layout)
+
+        btn_row = QHBoxLayout()
+        save_btn = QPushButton("Save")
+        cancel_btn = QPushButton("Cancel")
+        btn_row.addWidget(save_btn)
+        btn_row.addWidget(cancel_btn)
+        layout.addLayout(btn_row)
+
+        def save():
+            self.config.set_account_settings(
+                username,
+                {"min_delay": min_spin.value(), "max_delay": max_spin.value()},
+            )
+            dialog.accept()
+
+        save_btn.clicked.connect(save)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        dialog.exec_()
 
     def warmup_tab(self):
         tab = QWidget()
