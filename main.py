@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QSplitter,
     QDialog,
+    QFormLayout,
 )
 from PyQt5.QtCore import QTimer, Qt
 import time
@@ -31,6 +32,80 @@ from warmup_manager import WarmupManager
 from post_manager import PostManager
 from interaction_manager import InteractionManager
 from session_summary import SessionSummary
+
+
+class AccountSettingsWidget(QDialog):
+    """Dialog for editing per-account settings."""
+
+    def __init__(self, parent: "AutomationGUI", username: str, data: dict | None = None):
+        super().__init__(parent)
+        self.gui = parent
+        self.username = username
+        self.setWindowTitle(f"Account Settings - {username}")
+
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self.spins = {}
+        fields = [
+            ("likes", "Likes"),
+            ("follows", "Follows"),
+            ("shares", "Shares"),
+            ("saves", "Saves"),
+            ("reels_watch", "Reels Watch Count"),
+            ("scroll", "Scroll Duration"),
+            ("story_views", "Story Views"),
+            ("dms", "DMs"),
+            ("daily_posts", "Daily Posts"),
+        ]
+
+        for key, label in fields:
+            row = QHBoxLayout()
+            min_spin = QSpinBox()
+            min_spin.setRange(0, 10000)
+            max_spin = QSpinBox()
+            max_spin.setRange(0, 10000)
+            row.addWidget(QLabel("Min"))
+            row.addWidget(min_spin)
+            row.addWidget(QLabel("Max"))
+            row.addWidget(max_spin)
+            form.addRow(QLabel(label), row)
+            self.spins[key] = (min_spin, max_spin)
+
+        src_row = QHBoxLayout()
+        self.source_combo = QComboBox()
+        self.source_combo.addItems(["drafts", "gallery"])
+        src_row.addWidget(self.source_combo)
+        form.addRow(QLabel("Post Source"), src_row)
+
+        layout.addLayout(form)
+
+        save_btn = QPushButton("Save")
+        save_btn.clicked.connect(self.handle_save)
+        layout.addWidget(save_btn)
+
+        self.load_data(data or {})
+
+    def load_data(self, data: dict):
+        for key, (min_spin, max_spin) in self.spins.items():
+            vals = data.get(key, data.get(f"{key}_range"))
+            if isinstance(vals, list) and len(vals) == 2:
+                min_spin.setValue(vals[0])
+                max_spin.setValue(vals[1])
+            else:
+                min_spin.setValue(int(data.get(f"{key}_min", 0)))
+                max_spin.setValue(int(data.get(f"{key}_max", 0)))
+        source = data.get("post_source", "drafts")
+        idx = self.source_combo.findText(source)
+        if idx >= 0:
+            self.source_combo.setCurrentIndex(idx)
+
+    def handle_save(self):
+        data = {}
+        for key, (min_spin, max_spin) in self.spins.items():
+            data[key] = [min_spin.value(), max_spin.value()]
+        data["post_source"] = self.source_combo.currentText()
+        self.gui.config.set_account_settings(self.username, data)
+        self.accept()
 
 
 class ManageDialog(QDialog):
@@ -63,7 +138,9 @@ class ManageDialog(QDialog):
             remove_btn.clicked.connect(lambda _, p=platform: self.handle_remove(p))
             active_btn = QPushButton(f"Set Active {platform}")
             active_btn.clicked.connect(lambda _, p=platform: self.handle_active(p))
-            for b in (add_btn, remove_btn, active_btn):
+            settings_btn = QPushButton(f"{platform} Settings")
+            settings_btn.clicked.connect(lambda _, p=platform: self.handle_settings(p))
+            for b in (add_btn, remove_btn, active_btn, settings_btn):
                 btn_row.addWidget(b)
             layout.addLayout(btn_row)
 
@@ -105,6 +182,19 @@ class ManageDialog(QDialog):
     def handle_active(self, platform: str):
         self.gui.choose_active_account(self.device_id, platform)
         self._refresh_all()
+
+    def handle_settings(self, platform: str):
+        table = self.tables[platform]
+        row = table.currentRow()
+        if row == -1:
+            QMessageBox.warning(self, "Select Account", f"Select {platform} account to edit.")
+            return
+        item = table.item(row, 0)
+        if not item:
+            return
+        username = item.text()
+        self.gui.open_account_settings(username)
+        self.populate()
 
 class AutomationGUI(QMainWindow):
     def __init__(self):
@@ -414,6 +504,11 @@ class AutomationGUI(QMainWindow):
             for table in (self.android_table, self.iphone_table):
                 table.setRowCount(0)
             self.load_devices_ui()
+
+    def open_account_settings(self, username: str):
+        data = self.config.get_account_settings(username)
+        dlg = AccountSettingsWidget(self, username, data)
+        dlg.exec_()
 
     def warmup_tab(self):
         tab = QWidget()
