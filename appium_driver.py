@@ -170,17 +170,78 @@ class AppiumDriver:
     def verify_current_account(self, device_id, platform, expected_username):
         """Verify that the currently logged in account matches ``expected_username``.
 
-        This placeholder implementation would normally use Appium commands or
-        OCR to read the username from the profile page. It returns ``True`` if
-        the detected username matches ``expected_username``.
+        The method attempts to query the UI for the currently logged in user.
+        On Android devices the UI hierarchy is dumped via ``uiautomator`` and
+        searched for ``expected_username``.  For iPhones a screenshot is taken
+        and OCR is applied if ``pytesseract`` is available.  Any mismatch or
+        failure results in ``False`` being returned.
         """
         try:
             logger.info(
                 f"Verifying account on {device_id} for platform {platform}"
             )
-            # Placeholder for real verification logic
-            current_username = expected_username
-            return str(current_username).lower() == str(expected_username).lower()
+
+            os_type = utils.detect_device_os({"id": device_id})
+            detected_text = ""
+
+            if os_type == "Android":
+                try:
+                    output = subprocess.check_output(
+                        [
+                            "adb",
+                            "-s",
+                            device_id,
+                            "exec-out",
+                            "uiautomator",
+                            "dump",
+                            "/dev/tty",
+                        ],
+                        stderr=subprocess.STDOUT,
+                    ).decode("utf-8", errors="ignore")
+                    xml_start = output.find("<?xml")
+                    if xml_start != -1:
+                        detected_text = output[xml_start:]
+                except Exception as exc:
+                    logger.warning(
+                        f"Failed to dump UI hierarchy on {device_id}: {exc}"
+                    )
+            else:  # iPhone
+                screenshot = f"/tmp/{device_id}_verify.png"
+                try:
+                    subprocess.check_call(
+                        ["idevicescreenshot", "-u", device_id, screenshot]
+                    )
+                    try:
+                        from PIL import Image
+
+                        try:
+                            import pytesseract
+                        except Exception:
+                            pytesseract = None
+
+                        if pytesseract:
+                            detected_text = pytesseract.image_to_string(
+                                Image.open(screenshot)
+                            )
+                        else:
+                            logger.info(
+                                "pytesseract not available; skipping iOS OCR"
+                            )
+                    except Exception as exc:
+                        logger.warning(
+                            f"Failed OCR on {device_id}: {exc}"
+                        )
+                finally:
+                    if os.path.exists(screenshot):
+                        os.remove(screenshot)
+
+            if expected_username.lower() in detected_text.lower():
+                return True
+
+            logger.warning(
+                f"Account mismatch on {device_id} for {platform}: expected {expected_username}"
+            )
+            return False
         except Exception as e:
             logger.warning(
                 f"Account verification failed on {device_id} ({platform}): {e}"
