@@ -6,6 +6,7 @@ from collections import defaultdict
 LOG_DIR = os.path.join("Logs")
 WARMUP_LOG = os.path.join(LOG_DIR, "warmup_log.txt")
 POST_LOG = os.path.join(LOG_DIR, "post_log.txt")
+AUTOMATION_LOG = os.path.join(LOG_DIR, "automation_log.txt")
 
 TIME_FORMAT = "%a %b %d %H:%M:%S %Y"
 
@@ -54,6 +55,60 @@ def accumulate_logs():
                 ts = parse_time(m.group('ts'))
                 device = m.group('prefix') or m.group(3)
                 counts[device]["posts"] += 1
+                if ts:
+                    if start_time is None or ts < start_time:
+                        start_time = ts
+                    if end_time is None or ts > end_time:
+                        end_time = ts
+
+    return counts, start_time, end_time
+
+
+def accumulate_logs_by_account():
+    """Parse automation_log.txt and accumulate action counts per username."""
+    counts = defaultdict(lambda: {"likes": 0, "follows": 0, "comments": 0, "shares": 0, "posts": 0})
+    start_time = None
+    end_time = None
+
+    action_map = {
+        "LIKE": "likes",
+        "FOLLOW": "follows",
+        "COMMENT": "comments",
+        "SHARE": "shares",
+    }
+
+    if os.path.exists(AUTOMATION_LOG):
+        action_re = re.compile(
+            r"(?:\[(?P<prefix>[^\]]+)\]\s+)?(?P<ts>[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d+ \d+:\d+:\d+ \d{4}):.*(?:Warmup )?(?P<action>LIKE|FOLLOW|COMMENT|SHARE)\s+\w+\s+(?P<user>\S+)",
+            re.IGNORECASE,
+        )
+        post_re = re.compile(
+            r"(?:\[(?P<prefix>[^\]]+)\]\s+)?(?P<ts>[A-Z][a-z]{2} [A-Z][a-z]{2}\s+\d+ \d+:\d+:\d+ \d{4}):.*SUCCESS post \w+ (?P<user>\S+)",
+            re.IGNORECASE,
+        )
+        with open(AUTOMATION_LOG, "r") as f:
+            for line in f:
+                m = action_re.search(line)
+                if m:
+                    ts = parse_time(m.group("ts"))
+                    action = m.group("action").upper()
+                    user = m.group("user")
+                    metric = action_map.get(action)
+                    if metric:
+                        counts[user][metric] += 1
+                    if ts:
+                        if start_time is None or ts < start_time:
+                            start_time = ts
+                        if end_time is None or ts > end_time:
+                            end_time = ts
+                    continue
+
+                m = post_re.search(line)
+                if not m:
+                    continue
+                ts = parse_time(m.group("ts"))
+                user = m.group("user")
+                counts[user]["posts"] += 1
                 if ts:
                     if start_time is None or ts < start_time:
                         start_time = ts
