@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QTimer, Qt
 import time
+import random
 from config_manager import ConfigManager
 import utils
 from appium_driver import AppiumDriver
@@ -611,6 +612,61 @@ class AutomationGUI(QMainWindow):
 
         layout.addLayout(delay_layout)
 
+        self.range_spins = {}
+
+        def add_range(label, key, max_val):
+            row = QHBoxLayout()
+            row.addWidget(QLabel(f"{label} Min:"))
+            min_spin = QSpinBox()
+            min_spin.setRange(0, max_val)
+            current = self.config.settings.get("interaction_ranges", {}).get(key, [0, 0])
+            min_spin.setValue(current[0])
+            row.addWidget(min_spin)
+            row.addWidget(QLabel("Max:"))
+            max_spin = QSpinBox()
+            max_spin.setRange(0, max_val)
+            max_spin.setValue(current[1])
+            row.addWidget(max_spin)
+
+            def update():
+                mn = min_spin.value()
+                mx = max_spin.value()
+                if mn > mx:
+                    if self.sender() is min_spin:
+                        max_spin.setValue(mn)
+                        mx = mn
+                    else:
+                        min_spin.setValue(mx)
+                        mn = mx
+                ranges = self.config.settings.setdefault("interaction_ranges", {})
+                ranges[key] = [mn, mx]
+                self.config.save_json(self.config.settings_file, self.config.settings)
+
+            min_spin.valueChanged.connect(update)
+            max_spin.valueChanged.connect(update)
+            layout.addLayout(row)
+            self.range_spins[key] = (min_spin, max_spin)
+
+        add_range("Likes", "likes", 1000)
+        add_range("Follows", "follows", 1000)
+        add_range("Comments", "comments", 1000)
+        add_range("Shares", "shares", 1000)
+        add_range("Saves", "saves", 1000)
+        add_range("Watch Time (s)", "watch_time", 3600)
+        add_range("Scroll Duration (s)", "scroll_duration", 300)
+        add_range("Story Interactions", "story_interactions", 1000)
+        add_range("DMs", "dms", 500)
+        add_range("Daily Posts", "daily_posts", 50)
+
+        self.draft_checkbox = QCheckBox("Post from Drafts")
+        self.draft_checkbox.setChecked(self.config.settings.get("draft_posts", False))
+        self.draft_checkbox.stateChanged.connect(self.update_draft_setting)
+        layout.addWidget(self.draft_checkbox)
+
+        apply_btn = QPushButton("Apply to All Accounts")
+        apply_btn.clicked.connect(self.apply_defaults_to_all)
+        layout.addWidget(apply_btn)
+
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Settings")
 
@@ -633,6 +689,30 @@ class AutomationGUI(QMainWindow):
         self.config.settings['min_delay'] = min_val
         self.config.settings['max_delay'] = max_val
         self.config.save_json(self.config.settings_file, self.config.settings)
+
+    def update_draft_setting(self):
+        self.config.settings['draft_posts'] = self.draft_checkbox.isChecked()
+        self.config.save_json(self.config.settings_file, self.config.settings)
+
+    def apply_defaults_to_all(self):
+        ranges = self.config.settings.get('interaction_ranges', {})
+        applied = False
+        for device in self.config.accounts.values():
+            for pdata in device.values():
+                for username in pdata.get('accounts', []):
+                    if self.warmup_manager.is_warmup_active(username):
+                        continue
+                    settings = self.config.get_account_settings(username)
+                    settings['min_delay'] = self.config.settings.get('min_delay', 5)
+                    settings['max_delay'] = self.config.settings.get('max_delay', 15)
+                    for key, val in ranges.items():
+                        if isinstance(val, list) and len(val) == 2:
+                            settings[key] = random.randint(val[0], val[1])
+                    settings['draft_posts'] = self.config.settings.get('draft_posts', False)
+                    self.config.set_account_settings(username, settings)
+                    applied = True
+        if applied:
+            QMessageBox.information(self, 'Defaults Applied', 'Global defaults applied to accounts without warmup.')
 
     def logs_tab(self):
         tab = QWidget()
