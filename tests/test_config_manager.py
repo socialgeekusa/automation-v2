@@ -40,8 +40,11 @@ def test_account_manipulation(tmp_path):
 
 def test_account_settings(tmp_path):
     cm = create_cm(tmp_path)
-    cm.set_account_settings('user1', {'min_delay': 1})
-    assert cm.get_account_settings('user1')['min_delay'] == 1
+    cm.set_account_settings('user1', {'min_delay': 1, 'likes': 2, 'draft_posts': True})
+    settings = cm.get_account_settings('user1')
+    assert settings['min_delay'] == 1
+    assert settings['likes'] == 2
+    assert settings['draft_posts'] is True
 
 
 def test_save_device_name(tmp_path):
