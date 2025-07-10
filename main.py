@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QSplitter,
     QDialog,
+    QCheckBox,
 )
 from PyQt5.QtCore import QTimer, Qt
 import time
@@ -136,16 +137,96 @@ class AccountSettingsWidget(QWidget):
         max_layout.addWidget(self.max_spin)
         layout.addLayout(max_layout)
 
+        # Interaction parameters
+        self.likes_spin = QSpinBox()
+        self._add_spin_row(layout, "Max Likes:", self.likes_spin, 0, 1000)
+
+        self.follows_spin = QSpinBox()
+        self._add_spin_row(layout, "Max Follows:", self.follows_spin, 0, 1000)
+
+        self.comments_spin = QSpinBox()
+        self._add_spin_row(layout, "Max Comments:", self.comments_spin, 0, 1000)
+
+        self.shares_spin = QSpinBox()
+        self._add_spin_row(layout, "Max Shares:", self.shares_spin, 0, 1000)
+
+        self.saves_spin = QSpinBox()
+        self._add_spin_row(layout, "Max Saves:", self.saves_spin, 0, 1000)
+
+        self.watch_spin = QSpinBox()
+        self._add_spin_row(layout, "Watch Time (s):", self.watch_spin, 0, 3600)
+
+        self.scroll_spin = QSpinBox()
+        self._add_spin_row(layout, "Scroll Duration (s):", self.scroll_spin, 0, 300)
+
+        self.story_spin = QSpinBox()
+        self._add_spin_row(layout, "Story Interactions:", self.story_spin, 0, 1000)
+
+        self.dms_spin = QSpinBox()
+        self._add_spin_row(layout, "DMs per day:", self.dms_spin, 0, 500)
+
+        self.daily_posts_spin = QSpinBox()
+        self._add_spin_row(layout, "Daily Post Limit:", self.daily_posts_spin, 0, 50)
+
+        self.draft_checkbox = QCheckBox("Post from Drafts")
+        layout.addWidget(self.draft_checkbox)
+
         current = self.config.get_account_settings(username)
         self.min_spin.setValue(current.get("min_delay", self.config.settings.get("min_delay", 5)))
         self.max_spin.setValue(current.get("max_delay", self.config.settings.get("max_delay", 15)))
+        self.likes_spin.setValue(current.get("likes", 0))
+        self.follows_spin.setValue(current.get("follows", 0))
+        self.comments_spin.setValue(current.get("comments", 0))
+        self.shares_spin.setValue(current.get("shares", 0))
+        self.saves_spin.setValue(current.get("saves", 0))
+        self.watch_spin.setValue(current.get("watch_time", 0))
+        self.scroll_spin.setValue(current.get("scroll_duration", 0))
+        self.story_spin.setValue(current.get("story_interactions", 0))
+        self.dms_spin.setValue(current.get("dms", 0))
+        self.daily_posts_spin.setValue(current.get("daily_posts", 0))
+        self.draft_checkbox.setChecked(current.get("draft_posts", False))
 
         if self.warmup.is_warmup_active(username):
             self.min_spin.setEnabled(False)
             self.max_spin.setEnabled(False)
+            for spin in (
+                self.likes_spin,
+                self.follows_spin,
+                self.comments_spin,
+                self.shares_spin,
+                self.saves_spin,
+                self.watch_spin,
+                self.scroll_spin,
+                self.story_spin,
+                self.dms_spin,
+                self.daily_posts_spin,
+            ):
+                spin.setEnabled(False)
+            self.draft_checkbox.setEnabled(False)
+
+    def _add_spin_row(self, layout, label, spinbox, min_val, max_val):
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        spinbox.setRange(min_val, max_val)
+        row.addWidget(spinbox)
+        layout.addLayout(row)
 
     def get_settings(self):
-        return {"min_delay": self.min_spin.value(), "max_delay": self.max_spin.value()}
+        return {
+            "min_delay": self.min_spin.value(),
+            "max_delay": self.max_spin.value(),
+            "likes": self.likes_spin.value(),
+            "follows": self.follows_spin.value(),
+            "comments": self.comments_spin.value(),
+            "shares": self.shares_spin.value(),
+            "saves": self.saves_spin.value(),
+            "watch_time": self.watch_spin.value(),
+            "scroll_duration": self.scroll_spin.value(),
+            "story_interactions": self.story_spin.value(),
+            "dms": self.dms_spin.value(),
+            "daily_posts": self.daily_posts_spin.value(),
+            "draft_posts": self.draft_checkbox.isChecked(),
+        }
 
 class AutomationGUI(QMainWindow):
     def __init__(self):
