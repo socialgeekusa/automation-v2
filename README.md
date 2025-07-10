@@ -28,7 +28,17 @@ The GUI allows you to manage devices, accounts and start automation workflows. C
 
 Basic tests for the `ConfigManager` class are provided using `pytest`. Running
 `pip install -r requirements.txt` installs all dependencies, including
-`pytest`. To execute the tests:
+`pytest` and `PyQt5`. If you only need the GUI test dependencies you can
+manually install PyQt5 with:
+
+```bash
+pip install PyQt5
+```
+
+GUI tests expect an X11 backend. In headless environments use the offscreen
+platform by setting `QT_QPA_PLATFORM=offscreen`.
+
+To execute the tests:
 
 ```bash
 pytest
