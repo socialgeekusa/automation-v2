@@ -54,8 +54,8 @@ class ManageDialog(QDialog):
             table.verticalHeader().setVisible(False)
             table.setEditTriggers(QAbstractItemView.NoEditTriggers)
             table.itemDoubleClicked.connect(
-                lambda item, p=platform: self.gui.open_account_settings(
-                    self.device_id, p, item.text()
+                lambda item, p=platform, tbl=table: self.gui.open_account_settings(
+                    self.device_id, p, tbl.item(item.row(), 0).text()
                 )
             )
             self.tables[platform] = table
