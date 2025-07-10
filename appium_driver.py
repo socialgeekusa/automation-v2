@@ -217,3 +217,25 @@ class AppiumDriver:
                 f"Failed to switch account on {device_id} ({platform}) to {username}: {e}"
             )
             return False
+
+    def open_first_draft(self, device_id, platform):
+        """Open the first draft available for posting on the device."""
+        try:
+            logger.info(
+                f"Opening first draft on {device_id} for platform {platform}"
+            )
+            os_type = utils.detect_os(device_id)
+            if os_type == "Android":
+                subprocess.check_call(["adb", "-s", device_id, "shell", "input", "tap", "200", "200"])
+                time.sleep(0.5)
+                subprocess.check_call(["adb", "-s", device_id, "shell", "input", "tap", "200", "400"])
+            else:
+                subprocess.check_call(["idevicescreenshot", "-u", device_id, "/dev/null"])
+                time.sleep(0.5)
+            logger.info(f"First draft opened on {device_id}")
+            return True
+        except Exception as e:
+            logger.warning(
+                f"Failed to open first draft on {device_id} ({platform}): {e}"
+            )
+            return False

@@ -82,6 +82,7 @@ class PostManager:
             if not switched:
                 return
         try:
+            self.driver.open_first_draft(device_id, platform)
             # Placeholder for draft posting logic
             print(f"Posting draft on {platform} account {account} for device {device_id}")
             line = f"[{device_id}] {time.asctime()}: SUCCESS post {platform} {account} on {device_id}\n"
