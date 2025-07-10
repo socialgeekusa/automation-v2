@@ -88,7 +88,7 @@ class AppiumDriver:
     def open_app(self, device_id, platform):
         """Launch the requested social media app on the device."""
         try:
-            os_type = utils.detect_os(device_id)
+            os_type = utils.detect_device_os({"id": device_id})
             if os_type == "Android":
                 package = self.android_packages.get(platform)
                 if not package:
@@ -117,7 +117,7 @@ class AppiumDriver:
                     "run",
                     bundle,
                 ])
-                logger.info(f"Opened {platform} on iOS device {device_id}")
+                logger.info(f"Opened {platform} on iPhone device {device_id}")
             return True
         except Exception as e:
             logger.error(f"Failed to open {platform} on {device_id}: {e}")
@@ -199,7 +199,7 @@ class AppiumDriver:
             logger.info(
                 f"Switching account on {device_id} for platform {platform} to {username}"
             )
-            os_type = utils.detect_os(device_id)
+            os_type = utils.detect_device_os({"id": device_id})
             if os_type == "Android":
                 subprocess.check_call(["adb", "-s", device_id, "shell", "input", "tap", "100", "100"])
                 time.sleep(0.5)
@@ -224,7 +224,7 @@ class AppiumDriver:
             logger.info(
                 f"Opening first draft on {device_id} for platform {platform}"
             )
-            os_type = utils.detect_os(device_id)
+            os_type = utils.detect_device_os({"id": device_id})
             if os_type == "Android":
                 subprocess.check_call(["adb", "-s", device_id, "shell", "input", "tap", "200", "200"])
                 time.sleep(0.5)
