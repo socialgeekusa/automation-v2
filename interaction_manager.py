@@ -76,8 +76,16 @@ class InteractionManager:
         min_delay = settings_override.get("min_delay", self.config.settings.get("min_delay", 5))
         max_delay = settings_override.get("max_delay", self.config.settings.get("max_delay", 15))
 
+        global_limits = self.config.settings.get("interaction_limits", {}).get(platform, {})
+        account_limits = settings_override.get("interaction_limits", {}).get(platform, {})
+        action_min, action_max = account_limits.get(
+            "actions_per_cycle",
+            global_limits.get("actions_per_cycle", [1, 4]),
+        )
+        action_count = random.randint(action_min, action_max)
+
         # choose a random subset of actions each loop
-        for action in random.sample(actions, k=random.randint(1, 4)):
+        for action in random.sample(actions, k=min(action_count, len(actions))):
             print(f"Performing {action} on {platform} account {account} for device {device_id}")
             line = f"[{device_id}] {time.asctime()}: {action.upper()} {platform} {account} on {device_id}\n"
             with open(log_path, "a") as log:

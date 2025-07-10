@@ -2,6 +2,7 @@ import threading
 import time
 import random
 import os
+from datetime import date
 
 class PostManager:
     def __init__(self, driver, config):
@@ -10,6 +11,14 @@ class PostManager:
         self.active = False
         self.thread = None
         self.paused = False
+        self.daily_posts = {}
+        self.last_reset = date.today()
+
+    def _reset_daily_counts(self):
+        today = date.today()
+        if today != self.last_reset:
+            self.daily_posts.clear()
+            self.last_reset = today
 
     def run(self):
         if self.active:
@@ -66,6 +75,23 @@ class PostManager:
         automation_log = os.path.join(log_dir, "automation_log.txt")
         os.makedirs(log_dir, exist_ok=True)
 
+        self._reset_daily_counts()
+
+        acc_settings = self.config.get_account_settings(account)
+        global_limits = self.config.settings.get("post_limits", {}).get(platform, {})
+        limits = {**global_limits, **acc_settings.get("post_limits", {}).get(platform, {})}
+        max_daily = limits.get("max_daily_posts", 0)
+        source = limits.get("source", "drafts")
+
+        if max_daily and self.daily_posts.get(account, 0) >= max_daily:
+            warning = (
+                f"[{device_id}] {time.asctime()}: SKIP post limit reached for {platform} {account} on {device_id}\n"
+            )
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(warning)
+            print(warning.strip())
+            return
+
         if not self.driver.verify_current_account(device_id, platform, account):
             warning = f"[{device_id}] {time.asctime()}: WARNING account mismatch for {platform} {account} on {device_id}\n"
             with open(automation_log, "a") as auto_log:
@@ -74,12 +100,13 @@ class PostManager:
             return
         try:
             # Placeholder for draft posting logic
-            print(f"Posting draft on {platform} account {account} for device {device_id}")
+            print(f"Posting {source} on {platform} account {account} for device {device_id}")
             line = f"[{device_id}] {time.asctime()}: SUCCESS post {platform} {account} on {device_id}\n"
             with open(log_path, "a") as log:
                 log.write(line)
             with open(automation_log, "a") as auto_log:
                 auto_log.write(line)
+            self.daily_posts[account] = self.daily_posts.get(account, 0) + 1
         except Exception as e:
             line = f"[{device_id}] {time.asctime()}: FAIL post {platform} {account} on {device_id}: {e}\n"
             with open(log_path, "a") as log:

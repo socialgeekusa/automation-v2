@@ -93,7 +93,8 @@ class WarmupManager:
         Perform a set of actions based on warmup limits for platform.
         Logs each action to Logs/warmup_log.txt.
         """
-        limits = self.config.settings.get("warmup_limits", {}).get(platform, {})
+        global_limits = self.config.settings.get("warmup_limits", {}).get(platform, {})
+        limits = dict(global_limits)
         min_delay = self.config.settings.get("min_delay", 5)
         max_delay = self.config.settings.get("max_delay", 15)
         log_dir = os.path.join("Logs")
@@ -111,6 +112,7 @@ class WarmupManager:
         account_settings = self.config.get_account_settings(account)
         min_delay = account_settings.get("min_delay", min_delay)
         max_delay = account_settings.get("max_delay", max_delay)
+        limits.update(account_settings.get("warmup_limits", {}).get(platform, {}))
 
         def append_logs(message: str):
             with open(log_path, "a") as log:
