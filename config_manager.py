@@ -34,7 +34,20 @@ class ConfigManager:
             "warmup_limits": {
                 "TikTok": {"likes": [20,30], "follows": [5,10], "comments": [2,5], "shares": [1,3], "story_views": [50,100], "story_likes": [5,10], "posts": [0,0]},
                 "Instagram": {"likes": [30,50], "follows": [10,15], "comments": [5,8], "shares": [3,5], "story_views": [100,200], "story_likes": [10,20], "posts": [0,1]}
-            }
+            },
+            "interaction_ranges": {
+                "likes": [0, 0],
+                "follows": [0, 0],
+                "comments": [0, 0],
+                "shares": [0, 0],
+                "saves": [0, 0],
+                "watch_time": [0, 0],
+                "scroll_duration": [0, 0],
+                "story_interactions": [0, 0],
+                "dms": [0, 0],
+                "daily_posts": [0, 0]
+            },
+            "draft_posts": False
         })
         self.device_states: Dict[str, Dict] = self.load_json(self.state_file, default={})
         for dev in self.devices_info:

@@ -63,5 +63,18 @@
                 1
             ]
         }
-    }
+    },
+    "interaction_ranges": {
+        "likes": [0, 0],
+        "follows": [0, 0],
+        "comments": [0, 0],
+        "shares": [0, 0],
+        "saves": [0, 0],
+        "watch_time": [0, 0],
+        "scroll_duration": [0, 0],
+        "story_interactions": [0, 0],
+        "dms": [0, 0],
+        "daily_posts": [0, 0]
+    },
+    "draft_posts": false
 }
