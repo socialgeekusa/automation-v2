@@ -112,11 +112,24 @@ class WarmupManager:
         os.makedirs(log_dir, exist_ok=True)
 
         if not self.driver.verify_current_account(device_id, platform, account):
-            warning = f"[{device_id}] {time.asctime()}: WARNING account mismatch for {platform} {account} on {device_id}\n"
+            warning = (
+                f"[{device_id}] {time.asctime()}: WARNING account mismatch for {platform} {account} on {device_id}\n"
+            )
             with open(automation_log, "a") as auto_log:
                 auto_log.write(warning)
             print(warning.strip())
-            return
+
+            switched = self.driver.switch_account(device_id, platform, account)
+            result = "SUCCESS" if switched else "FAIL"
+            switch_line = (
+                f"[{device_id}] {time.asctime()}: SWITCH {result} {platform} {account} on {device_id}\n"
+            )
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(switch_line)
+            print(switch_line.strip())
+
+            if not switched:
+                return
 
         account_settings = self.config.get_account_settings(account)
         min_delay = account_settings.get("min_delay", min_delay)

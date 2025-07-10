@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from post_manager import PostManager
 from interaction_manager import InteractionManager
+import warmup_manager
 
 class DummyDriver:
     def __init__(self, verify_result=False):
@@ -129,4 +130,18 @@ def test_interaction_loop_invokes_open_and_switch(tmp_path, monkeypatch):
     os.chdir(cwd)
 
     assert driver.open_called
+    assert driver.switch_called
+
+
+def test_warmup_manager_attempts_switch(tmp_path):
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    driver = DummyDriver()
+    config = DummyConfig()
+    wm = warmup_manager.WarmupManager(driver, config)
+
+    wm.perform_warmup_actions("dev", "TikTok", "user")
+
+    os.chdir(cwd)
+
     assert driver.switch_called
