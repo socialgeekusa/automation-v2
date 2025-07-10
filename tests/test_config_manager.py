@@ -21,6 +21,8 @@ def test_default_files_created(tmp_path):
     assert os.path.isfile(cm.account_settings_file)
     assert os.path.isfile(cm.settings_file)
     assert cm.settings['fast_mode'] is False
+    assert 'interaction_limits' in cm.settings
+    assert cm.settings['interaction_limits']['likes'] == [5, 10]
 
 
 def test_account_manipulation(tmp_path):

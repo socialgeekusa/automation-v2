@@ -536,6 +536,71 @@ class AutomationGUI(QMainWindow):
 
         layout.addLayout(delay_layout)
 
+        self.likes_min_spin = QSpinBox()
+        self.likes_min_spin.setRange(0, 500)
+        self.likes_max_spin = QSpinBox()
+        self.likes_max_spin.setRange(0, 500)
+
+        likes_layout = QHBoxLayout()
+        likes_layout.addWidget(QLabel("Min Likes:"))
+        self.likes_min_spin.setValue(self.config.settings.get("interaction_limits", {}).get("likes", [5,10])[0])
+        self.likes_min_spin.valueChanged.connect(self.update_interaction_limits)
+        likes_layout.addWidget(self.likes_min_spin)
+        likes_layout.addWidget(QLabel("Max Likes:"))
+        self.likes_max_spin.setValue(self.config.settings.get("interaction_limits", {}).get("likes", [5,10])[1])
+        self.likes_max_spin.valueChanged.connect(self.update_interaction_limits)
+        likes_layout.addWidget(self.likes_max_spin)
+        layout.addLayout(likes_layout)
+
+        self.follows_min_spin = QSpinBox()
+        self.follows_min_spin.setRange(0, 500)
+        self.follows_max_spin = QSpinBox()
+        self.follows_max_spin.setRange(0, 500)
+        follows_layout = QHBoxLayout()
+        follows_layout.addWidget(QLabel("Min Follows:"))
+        self.follows_min_spin.setValue(self.config.settings.get("interaction_limits", {}).get("follows", [1,5])[0])
+        self.follows_min_spin.valueChanged.connect(self.update_interaction_limits)
+        follows_layout.addWidget(self.follows_min_spin)
+        follows_layout.addWidget(QLabel("Max Follows:"))
+        self.follows_max_spin.setValue(self.config.settings.get("interaction_limits", {}).get("follows", [1,5])[1])
+        self.follows_max_spin.valueChanged.connect(self.update_interaction_limits)
+        follows_layout.addWidget(self.follows_max_spin)
+        layout.addLayout(follows_layout)
+
+        self.comments_min_spin = QSpinBox()
+        self.comments_min_spin.setRange(0, 500)
+        self.comments_max_spin = QSpinBox()
+        self.comments_max_spin.setRange(0, 500)
+        comments_layout = QHBoxLayout()
+        comments_layout.addWidget(QLabel("Min Comments:"))
+        self.comments_min_spin.setValue(self.config.settings.get("interaction_limits", {}).get("comments", [1,3])[0])
+        self.comments_min_spin.valueChanged.connect(self.update_interaction_limits)
+        comments_layout.addWidget(self.comments_min_spin)
+        comments_layout.addWidget(QLabel("Max Comments:"))
+        self.comments_max_spin.setValue(self.config.settings.get("interaction_limits", {}).get("comments", [1,3])[1])
+        self.comments_max_spin.valueChanged.connect(self.update_interaction_limits)
+        comments_layout.addWidget(self.comments_max_spin)
+        layout.addLayout(comments_layout)
+
+        self.shares_min_spin = QSpinBox()
+        self.shares_min_spin.setRange(0, 500)
+        self.shares_max_spin = QSpinBox()
+        self.shares_max_spin.setRange(0, 500)
+        shares_layout = QHBoxLayout()
+        shares_layout.addWidget(QLabel("Min Shares:"))
+        self.shares_min_spin.setValue(self.config.settings.get("interaction_limits", {}).get("shares", [1,2])[0])
+        self.shares_min_spin.valueChanged.connect(self.update_interaction_limits)
+        shares_layout.addWidget(self.shares_min_spin)
+        shares_layout.addWidget(QLabel("Max Shares:"))
+        self.shares_max_spin.setValue(self.config.settings.get("interaction_limits", {}).get("shares", [1,2])[1])
+        self.shares_max_spin.valueChanged.connect(self.update_interaction_limits)
+        shares_layout.addWidget(self.shares_max_spin)
+        layout.addLayout(shares_layout)
+
+        apply_btn = QPushButton("Apply to All Accounts")
+        apply_btn.clicked.connect(self.apply_to_all_accounts)
+        layout.addWidget(apply_btn)
+
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Settings")
 
@@ -558,6 +623,33 @@ class AutomationGUI(QMainWindow):
         self.config.settings['min_delay'] = min_val
         self.config.settings['max_delay'] = max_val
         self.config.save_json(self.config.settings_file, self.config.settings)
+
+    def update_interaction_limits(self):
+        limits = self.config.settings.setdefault('interaction_limits', {})
+        pairs = [
+            ('likes', self.likes_min_spin, self.likes_max_spin),
+            ('follows', self.follows_min_spin, self.follows_max_spin),
+            ('comments', self.comments_min_spin, self.comments_max_spin),
+            ('shares', self.shares_min_spin, self.shares_max_spin),
+        ]
+        for key, min_spin, max_spin in pairs:
+            if min_spin.value() > max_spin.value():
+                if self.sender() is min_spin:
+                    max_spin.setValue(min_spin.value())
+                else:
+                    min_spin.setValue(max_spin.value())
+            limits[key] = [min_spin.value(), max_spin.value()]
+        self.config.save_json(self.config.settings_file, self.config.settings)
+
+    def apply_to_all_accounts(self):
+        limits = self.config.settings.get('interaction_limits', {})
+        for device_data in self.config.accounts.values():
+            for platform_data in device_data.values():
+                for account in platform_data.get('accounts', []):
+                    settings = self.config.get_account_settings(account)
+                    settings['interaction_limits'] = limits
+                    self.config.set_account_settings(account, settings)
+        QMessageBox.information(self, 'Settings Applied', 'Interaction limits applied to all accounts.')
 
     def logs_tab(self):
         tab = QWidget()

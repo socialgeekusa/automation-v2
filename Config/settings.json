@@ -2,6 +2,24 @@
     "fast_mode": false,
     "min_delay": 5,
     "max_delay": 15,
+    "interaction_limits": {
+        "likes": [
+            5,
+            10
+        ],
+        "follows": [
+            1,
+            5
+        ],
+        "comments": [
+            1,
+            3
+        ],
+        "shares": [
+            1,
+            2
+        ]
+    },
     "warmup_limits": {
         "TikTok": {
             "likes": [
@@ -63,5 +81,4 @@
                 1
             ]
         }
-    }
-}
+    }}
