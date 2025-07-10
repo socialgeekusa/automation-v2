@@ -652,8 +652,16 @@ class AutomationGUI(QMainWindow):
         self.config.settings['draft_posts'] = self.draft_checkbox.isChecked()
         self.config.save_json(self.config.settings_file, self.config.settings)
 
-    def apply_defaults_to_all(self, platforms=None):
-        """Apply global defaults to all accounts optionally filtered by platform."""
+    def apply_defaults_to_all(self, platforms=None, show_popup=True):
+        """Apply global defaults to all accounts optionally filtered by platform.
+
+        Parameters
+        ----------
+        platforms : iterable[str] | None
+            Optional set of platforms to limit updates to.
+        show_popup : bool, default True
+            Whether to display a confirmation popup when defaults are applied.
+        """
         ranges = self.config.settings.get('interaction_ranges', {})
         applied = False
         if platforms is not None:
@@ -676,7 +684,7 @@ class AutomationGUI(QMainWindow):
                     settings['draft_posts'] = self.config.settings.get('draft_posts', False)
                     self.config.set_account_settings(username, settings)
                     applied = True
-        if applied:
+        if applied and show_popup:
             QMessageBox.information(self, 'Defaults Applied', 'Global defaults applied to accounts without warmup.')
 
     def logs_tab(self):
@@ -783,6 +791,9 @@ class AutomationGUI(QMainWindow):
         self.tabs.addTab(tab, "Start")
 
     def run_automation(self):
+        # Apply global defaults to all accounts before starting managers
+        self.apply_defaults_to_all(show_popup=False)
+
         self.interaction_manager.run()
         self.post_manager.run()
 
