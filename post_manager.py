@@ -71,7 +71,14 @@ class PostManager:
             with open(automation_log, "a") as auto_log:
                 auto_log.write(warning)
             print(warning.strip())
-            return
+            switched = self.driver.switch_account(device_id, platform, account)
+            result = "SUCCESS" if switched else "FAIL"
+            switch_line = f"[{device_id}] {time.asctime()}: SWITCH {result} {platform} {account} on {device_id}\n"
+            with open(automation_log, "a") as auto_log:
+                auto_log.write(switch_line)
+            print(switch_line.strip())
+            if not switched:
+                return
         try:
             # Placeholder for draft posting logic
             print(f"Posting draft on {platform} account {account} for device {device_id}")
