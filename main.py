@@ -617,6 +617,14 @@ class AutomationGUI(QMainWindow):
         apply_btn.clicked.connect(self.apply_defaults_to_all)
         layout.addWidget(apply_btn)
 
+        apply_tiktok_btn = QPushButton("Apply to All TikTok Accounts")
+        apply_tiktok_btn.clicked.connect(lambda: self.apply_defaults_to_all({"TikTok"}))
+        layout.addWidget(apply_tiktok_btn)
+
+        apply_instagram_btn = QPushButton("Apply to All Instagram Accounts")
+        apply_instagram_btn.clicked.connect(lambda: self.apply_defaults_to_all({"Instagram"}))
+        layout.addWidget(apply_instagram_btn)
+
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Settings")
 
@@ -644,11 +652,16 @@ class AutomationGUI(QMainWindow):
         self.config.settings['draft_posts'] = self.draft_checkbox.isChecked()
         self.config.save_json(self.config.settings_file, self.config.settings)
 
-    def apply_defaults_to_all(self):
+    def apply_defaults_to_all(self, platforms=None):
+        """Apply global defaults to all accounts optionally filtered by platform."""
         ranges = self.config.settings.get('interaction_ranges', {})
         applied = False
+        if platforms is not None:
+            platforms = set(platforms)
         for device in self.config.accounts.values():
-            for pdata in device.values():
+            for plat, pdata in device.items():
+                if platforms and plat not in platforms:
+                    continue
                 for username in pdata.get('accounts', []):
                     if self.warmup_manager.is_warmup_active(username):
                         continue
@@ -657,7 +670,9 @@ class AutomationGUI(QMainWindow):
                     settings['max_delay'] = self.config.settings.get('max_delay', 15)
                     for key, val in ranges.items():
                         if isinstance(val, list) and len(val) == 2:
-                            settings[key] = random.randint(val[0], val[1])
+                            settings[key] = val[1]
+                        else:
+                            settings[key] = val
                     settings['draft_posts'] = self.config.settings.get('draft_posts', False)
                     self.config.set_account_settings(username, settings)
                     applied = True
