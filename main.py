@@ -96,7 +96,6 @@ class ManageDialog(QDialog):
     def _refresh_all(self):
         """Refresh tables and parent views."""
         self.populate()
-        self.gui.load_accounts()
         for table in (self.gui.android_table, self.gui.iphone_table):
             table.setRowCount(0)
         self.gui.load_devices_ui()
@@ -366,7 +365,6 @@ class AutomationGUI(QMainWindow):
     def manage_device(self, device_id: str):
         dialog = ManageDialog(self, device_id)
         dialog.exec_()
-        self.load_accounts()
         self.refresh_devices()
 
     def delete_device(self, device_id: str):
@@ -434,66 +432,18 @@ class AutomationGUI(QMainWindow):
         tab = QWidget()
         self.accounts_tab_widget = tab
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("🔑 Accounts per Device:"))
-
-        self.accounts_container = QWidget()
-        self.accounts_layout = QVBoxLayout()
-        self.accounts_container.setLayout(self.accounts_layout)
-        layout.addWidget(self.accounts_container)
 
         # Area to embed per-account settings widgets
         self.account_settings_area = QWidget()
         self.account_settings_area.setLayout(QVBoxLayout())
         layout.addWidget(self.account_settings_area)
 
-        refresh_btn = QPushButton("Refresh Accounts")
-        refresh_btn.clicked.connect(self.load_accounts)
-        layout.addWidget(refresh_btn)
-
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Accounts")
-        self.load_accounts()
 
     def load_accounts(self):
-        for i in reversed(range(self.accounts_layout.count())):
-            item = self.accounts_layout.takeAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-
-        device_ids = set(self.driver.list_devices()) | set(self.config.accounts.keys())
-        for device_id in sorted(device_ids):
-            details = self.config.accounts.get(device_id, {})
-            nickname = self.config.devices.get(device_id, device_id)
-            row = QHBoxLayout()
-            row.addWidget(QLabel(f"{nickname} ({device_id})"))
-
-            tiktok_active = details.get("TikTok", {}).get("active")
-            row.addWidget(QLabel(f"TikTok Active: {tiktok_active or 'None'}"))
-            tiktok_btn = QPushButton("Set Active TikTok")
-            tiktok_btn.clicked.connect(lambda _, d=device_id: self.choose_active_account(d, "TikTok"))
-            row.addWidget(tiktok_btn)
-            add_tiktok = QPushButton("Add TikTok Account")
-            add_tiktok.clicked.connect(lambda _, d=device_id: self.add_account(d, "TikTok"))
-            row.addWidget(add_tiktok)
-            remove_tiktok = QPushButton("Remove TikTok Account")
-            remove_tiktok.clicked.connect(lambda _, d=device_id: self.remove_account(d, "TikTok"))
-            row.addWidget(remove_tiktok)
-
-            instagram_active = details.get("Instagram", {}).get("active")
-            row.addWidget(QLabel(f"Instagram Active: {instagram_active or 'None'}"))
-            insta_btn = QPushButton("Set Active Instagram")
-            insta_btn.clicked.connect(lambda _, d=device_id: self.choose_active_account(d, "Instagram"))
-            row.addWidget(insta_btn)
-            add_instagram = QPushButton("Add Instagram Account")
-            add_instagram.clicked.connect(lambda _, d=device_id: self.add_account(d, "Instagram"))
-            row.addWidget(add_instagram)
-            remove_instagram = QPushButton("Remove Instagram Account")
-            remove_instagram.clicked.connect(lambda _, d=device_id: self.remove_account(d, "Instagram"))
-            row.addWidget(remove_instagram)
-
-            container = QWidget()
-            container.setLayout(row)
-            self.accounts_layout.addWidget(container)
+        """Deprecated: accounts are managed via the Manage dialog."""
+        pass
 
     def choose_active_account(self, device_id, platform):
         accounts = self.config.accounts.get(device_id, {}).get(platform, {}).get("accounts", [])
