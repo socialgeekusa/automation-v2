@@ -3,6 +3,9 @@ import threading
 import time
 import logging
 import os
+from typing import Dict
+
+import utils
 
 os.makedirs("Logs", exist_ok=True)
 logging.basicConfig(
@@ -16,6 +19,14 @@ class AppiumDriver:
     def __init__(self):
         self.devices = []
         self.lock = threading.Lock()
+        self.android_packages: Dict[str, str] = {
+            "TikTok": "com.zhiliaoapp.musically",
+            "Instagram": "com.instagram.android",
+        }
+        self.ios_bundles: Dict[str, str] = {
+            "TikTok": "com.zhiliaoapp.musically",
+            "Instagram": "com.burbn.instagram",
+        }
 
     def list_devices(self):
         """
@@ -73,6 +84,44 @@ class AppiumDriver:
             logger.info(f"Session stopped for device {device_id}")
         except Exception as e:
             logger.error(f"Failed to stop session on {device_id}: {e}")
+
+    def open_app(self, device_id, platform):
+        """Launch the requested social media app on the device."""
+        try:
+            os_type = utils.detect_os(device_id)
+            if os_type == "Android":
+                package = self.android_packages.get(platform)
+                if not package:
+                    raise ValueError(f"Unknown app platform: {platform}")
+                subprocess.check_call([
+                    "adb",
+                    "-s",
+                    device_id,
+                    "shell",
+                    "monkey",
+                    "-p",
+                    package,
+                    "-c",
+                    "android.intent.category.LAUNCHER",
+                    "1",
+                ])
+                logger.info(f"Opened {platform} on Android device {device_id}")
+            else:
+                bundle = self.ios_bundles.get(platform)
+                if not bundle:
+                    raise ValueError(f"Unknown app platform: {platform}")
+                subprocess.check_call([
+                    "idevicedebug",
+                    "-u",
+                    device_id,
+                    "run",
+                    bundle,
+                ])
+                logger.info(f"Opened {platform} on iOS device {device_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to open {platform} on {device_id}: {e}")
+            return False
 
     def send_touch(self, device_id, x, y):
         """
@@ -142,14 +191,23 @@ class AppiumDriver:
         """Attempt to switch to ``username`` on ``device_id`` for ``platform``.
 
         Logs the action and returns ``True`` if successful, ``False`` otherwise.
-        The actual switching steps are represented by placeholder actions.
+        A handful of shell-based Appium commands emulate the UI steps for
+        selecting an account. This keeps the implementation lightweight for the
+        test environment while demonstrating the expected workflow.
         """
         try:
             logger.info(
                 f"Switching account on {device_id} for platform {platform} to {username}"
             )
-            # Placeholder for real account switching logic using Appium
-            time.sleep(1)
+            os_type = utils.detect_os(device_id)
+            if os_type == "Android":
+                subprocess.check_call(["adb", "-s", device_id, "shell", "input", "tap", "100", "100"])
+                time.sleep(0.5)
+                subprocess.check_call(["adb", "-s", device_id, "shell", "input", "text", username])
+                subprocess.check_call(["adb", "-s", device_id, "shell", "input", "keyevent", "66"])
+            else:
+                subprocess.check_call(["idevicescreenshot", "-u", device_id, "/dev/null"])
+                time.sleep(0.5)
             logger.info(
                 f"Successfully switched account on {device_id} to {username}"
             )

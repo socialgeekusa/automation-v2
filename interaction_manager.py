@@ -40,6 +40,8 @@ class InteractionManager:
                     platform_info = details.get(platform, {})
                     active_account = platform_info.get("active")
                     if active_account:
+                        self.driver.start_session(device_id, platform)
+                        self.driver.open_app(device_id, platform)
                         self.perform_interactions(device_id, platform, active_account)
                         # random delay between each account’s interactions
                         delay = random.uniform(
