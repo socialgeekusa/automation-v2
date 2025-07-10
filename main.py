@@ -783,8 +783,8 @@ class AutomationGUI(QMainWindow):
         self.tabs.addTab(tab, "Start")
 
     def run_automation(self):
-        self.post_manager.run()
         self.interaction_manager.run()
+        self.post_manager.run()
 
         # wait for both managers to finish before showing results
         if self.post_manager.thread:
