@@ -37,3 +37,23 @@ def test_dialog_persists_accounts(tmp_path, monkeypatch):
     gui.close()
     app.quit()
 
+
+def test_double_click_opens_settings(tmp_path):
+    """Double clicking a username should open AccountSettingsWidget."""
+    gui, app = create_gui(tmp_path)
+    gui.config.add_device("dev1")
+    gui.config.add_account("dev1", "TikTok", "user1")
+
+    dialog = main.ManageDialog(gui, "dev1")
+    table = dialog.tables["TikTok"]
+    item = table.item(0, 0)
+    table.itemDoubleClicked.emit(item)
+
+    layout = gui.account_settings_area.layout()
+    widgets = [layout.itemAt(i).widget() for i in range(layout.count())]
+    assert any(isinstance(w, main.AccountSettingsWidget) for w in widgets)
+
+    dialog.close()
+    gui.close()
+    app.quit()
+

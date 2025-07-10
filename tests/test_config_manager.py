@@ -47,6 +47,29 @@ def test_account_settings(tmp_path):
     assert settings['draft_posts'] is True
 
 
+def test_account_settings_persist_all_fields(tmp_path):
+    cm = create_cm(tmp_path)
+    all_settings = {
+        'min_delay': 1,
+        'max_delay': 2,
+        'likes': 3,
+        'follows': 4,
+        'comments': 5,
+        'shares': 6,
+        'saves': 7,
+        'watch_time': 8,
+        'scroll_duration': 9,
+        'story_interactions': 10,
+        'dms': 11,
+        'daily_posts': 12,
+        'draft_posts': True,
+    }
+    cm.set_account_settings('user1', all_settings)
+    cm2 = create_cm(tmp_path)
+    loaded = cm2.get_account_settings('user1')
+    assert loaded == all_settings
+
+
 def test_save_device_name(tmp_path):
     cm = create_cm(tmp_path)
     cm.add_device('dev1')
