@@ -66,6 +66,7 @@ class ConfigManager:
                 "dms": [0, 0],
                 "daily_posts": [0, 0]
             },
+            "gesture_coords": {},
             "draft_posts": False
         })
         self.device_states: Dict[str, Dict] = self.load_json(self.state_file, default={})

@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from post_manager import PostManager
 from interaction_manager import InteractionManager
+import interaction_manager
 import warmup_manager
 
 class DummyDriver:
@@ -15,6 +16,9 @@ class DummyDriver:
         self.open_called = False
         self.open_draft_called = False
         self.start_called = False
+        self.swiped = False
+        self.touched = []
+        self.keys = []
 
     def start_session(self, device_id, platform):
         self.start_called = True
@@ -31,6 +35,15 @@ class DummyDriver:
     def switch_account(self, device_id, platform, username):
         self.switch_called = True
         return True
+
+    def send_touch(self, device_id, x, y):
+        self.touched.append((x, y))
+
+    def send_key(self, device_id, key_code):
+        self.keys.append(key_code)
+
+    def swipe(self, device_id, sx, sy, ex, ey, dur):
+        self.swiped = True
 
 class DummyConfig:
     def __init__(self):
@@ -145,3 +158,49 @@ def test_warmup_manager_attempts_switch(tmp_path):
     os.chdir(cwd)
 
     assert driver.switch_called
+
+
+def test_perform_interactions_dispatches_actions(tmp_path, monkeypatch):
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    class Driver(DummyDriver):
+        def __init__(self):
+            super().__init__(verify_result=True)
+            self.swipe_args = None
+            self.touches = []
+            self.keys = []
+
+        def swipe(self, device_id, sx, sy, ex, ey, dur):
+            self.swipe_args = (sx, sy, ex, ey, dur)
+
+        def send_touch(self, device_id, x, y):
+            self.touches.append((x, y))
+
+        def send_key(self, device_id, code):
+            self.keys.append(code)
+
+    driver = Driver()
+    config = DummyConfig()
+    im = InteractionManager(driver, config)
+
+    actions = [
+        "scroll",
+        "like",
+        "comment",
+        "save",
+        "share",
+        "view_story",
+        "like_story",
+    ]
+
+    monkeypatch.setattr(interaction_manager.random, "randint", lambda a, b: len(actions))
+    monkeypatch.setattr(interaction_manager.random, "sample", lambda pop, k: actions)
+    monkeypatch.setattr(interaction_manager.time, "sleep", lambda *a, **k: None)
+
+    im.perform_interactions("dev", "TikTok", "user")
+    os.chdir(cwd)
+
+    assert driver.swipe_args is not None
+    assert len(driver.touches) == len(actions) - 1
+    assert driver.keys
