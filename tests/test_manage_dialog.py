@@ -49,9 +49,8 @@ def test_double_click_opens_settings(tmp_path):
     item = table.item(0, 0)
     table.itemDoubleClicked.emit(item)
 
-    layout = gui.account_settings_area.layout()
-    widgets = [layout.itemAt(i).widget() for i in range(layout.count())]
-    assert any(isinstance(w, main.AccountSettingsWidget) for w in widgets)
+    assert isinstance(gui.account_settings_dialog, main.AccountSettingsDialog)
+    assert isinstance(gui.account_settings_dialog.settings_widget, main.AccountSettingsWidget)
 
     dialog.close()
     gui.close()
