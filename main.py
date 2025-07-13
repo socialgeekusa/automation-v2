@@ -228,6 +228,309 @@ class AccountSettingsWidget(QWidget):
             "draft_posts": self.draft_checkbox.isChecked(),
         }
 
+
+class AccountSettingsDialog(QDialog):
+    """Dialog wrapper around :class:`AccountSettingsWidget`."""
+
+    def __init__(self, gui: "AutomationGUI", device_id: str, platform: str, username: str):
+        super().__init__(gui)
+        self.gui = gui
+        self.device_id = device_id
+        self.platform = platform
+        self.username = username
+
+        self.setWindowTitle(f"Account Settings - {username}")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel(f"Edit settings for {platform} account {username} on {device_id}"))
+
+        self.settings_widget = AccountSettingsWidget(username, gui.config, gui.warmup_manager)
+        layout.addWidget(self.settings_widget)
+
+        if gui.warmup_manager.is_warmup_active(username):
+            layout.addWidget(QLabel("Warmup active: delay overrides are disabled."))
+
+        btn_row = QHBoxLayout()
+        save_btn = QPushButton("Save")
+        close_btn = QPushButton("Close")
+        btn_row.addWidget(save_btn)
+        btn_row.addWidget(close_btn)
+        layout.addLayout(btn_row)
+
+        save_btn.clicked.connect(self.save)
+        close_btn.clicked.connect(self.accept)
+
+    def save(self):
+        self.gui.config.set_account_settings(self.username, self.settings_widget.get_settings())
+
+
+class SettingsDialog(QDialog):
+    """Dialog for editing global settings."""
+
+    def __init__(self, gui: "AutomationGUI"):
+        super().__init__(gui)
+        self.gui = gui
+
+        self.setWindowTitle("Settings")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("⚙️ Global Settings"))
+
+        self.fast_bot_mode_btn = QPushButton("Toggle Fast Bot Mode (OFF)")
+        self.fast_bot_mode_btn.setCheckable(True)
+        self.fast_bot_mode_btn.clicked.connect(self.toggle_fast_bot_mode)
+        layout.addWidget(self.fast_bot_mode_btn)
+
+        delay_layout = QHBoxLayout()
+        delay_layout.addWidget(QLabel("Min Delay (s):"))
+        self.min_delay_spin = QSpinBox()
+        self.min_delay_spin.setRange(0, 120)
+        self.min_delay_spin.setValue(gui.config.settings.get("min_delay", 5))
+        self.min_delay_spin.valueChanged.connect(self.update_delay_settings)
+        delay_layout.addWidget(self.min_delay_spin)
+
+        delay_layout.addWidget(QLabel("Max Delay (s):"))
+        self.max_delay_spin = QSpinBox()
+        self.max_delay_spin.setRange(0, 120)
+        self.max_delay_spin.setValue(gui.config.settings.get("max_delay", 15))
+        self.max_delay_spin.valueChanged.connect(self.update_delay_settings)
+        delay_layout.addWidget(self.max_delay_spin)
+
+        layout.addLayout(delay_layout)
+
+        preset_btn = QPushButton("Apply Slow Human Preset")
+        preset_btn.clicked.connect(lambda: self.apply_preset(SLOW_HUMAN_PRESET))
+        layout.addWidget(preset_btn)
+
+        self.range_spins = {}
+
+        def add_range(label, key, max_val):
+            row = QHBoxLayout()
+            row.addWidget(QLabel(f"{label} Min:"))
+            min_spin = QSpinBox()
+            min_spin.setRange(0, max_val)
+            current = gui.config.settings.get("interaction_ranges", {}).get(key, [0, 0])
+            min_spin.setValue(current[0])
+            row.addWidget(min_spin)
+            row.addWidget(QLabel("Max:"))
+            max_spin = QSpinBox()
+            max_spin.setRange(0, max_val)
+            max_spin.setValue(current[1])
+            row.addWidget(max_spin)
+
+            def update():
+                mn = min_spin.value()
+                mx = max_spin.value()
+                if mn > mx:
+                    if self.sender() is min_spin:
+                        max_spin.setValue(mn)
+                        mx = mn
+                    else:
+                        min_spin.setValue(mx)
+                        mn = mx
+                ranges = gui.config.settings.setdefault("interaction_ranges", {})
+                ranges[key] = [mn, mx]
+                gui.config.save_json(gui.config.settings_file, gui.config.settings)
+
+            min_spin.valueChanged.connect(update)
+            max_spin.valueChanged.connect(update)
+            layout.addLayout(row)
+            self.range_spins[key] = (min_spin, max_spin)
+
+        add_range("Likes", "likes", 1000)
+        add_range("Follows", "follows", 1000)
+        add_range("Comments", "comments", 1000)
+        add_range("Shares", "shares", 1000)
+        add_range("Saves", "saves", 1000)
+        add_range("Watch Time (s)", "watch_time", 3600)
+        add_range("Scroll Duration (s)", "scroll_duration", 300)
+        add_range("Story Interactions", "story_interactions", 1000)
+        add_range("DMs", "dms", 500)
+        add_range("Daily Posts", "daily_posts", 50)
+
+        self.draft_checkbox = QCheckBox("Post from Drafts")
+        self.draft_checkbox.setChecked(gui.config.settings.get("draft_posts", False))
+        self.draft_checkbox.stateChanged.connect(self.update_draft_setting)
+        layout.addWidget(self.draft_checkbox)
+
+        apply_btn = QPushButton("Apply to All Accounts")
+        apply_btn.clicked.connect(gui.apply_defaults_to_all)
+        layout.addWidget(apply_btn)
+
+        apply_tiktok_btn = QPushButton("Apply to All TikTok Accounts")
+        apply_tiktok_btn.clicked.connect(lambda: gui.apply_defaults_to_all({"TikTok"}))
+        layout.addWidget(apply_tiktok_btn)
+
+        apply_instagram_btn = QPushButton("Apply to All Instagram Accounts")
+        apply_instagram_btn.clicked.connect(lambda: gui.apply_defaults_to_all({"Instagram"}))
+        layout.addWidget(apply_instagram_btn)
+
+    def toggle_fast_bot_mode(self):
+        state = self.fast_bot_mode_btn.isChecked()
+        self.gui.config.settings["fast_mode"] = state
+        self.fast_bot_mode_btn.setText(f"Toggle Fast Bot Mode ({'ON' if state else 'OFF'})")
+        self.gui.config.save_json(self.gui.config.settings_file, self.gui.config.settings)
+
+    def update_delay_settings(self):
+        min_val = self.min_delay_spin.value()
+        max_val = self.max_delay_spin.value()
+        if min_val > max_val:
+            if self.sender() is self.min_delay_spin:
+                self.max_delay_spin.setValue(min_val)
+                max_val = min_val
+            else:
+                self.min_delay_spin.setValue(max_val)
+                min_val = max_val
+        self.gui.config.settings["min_delay"] = min_val
+        self.gui.config.settings["max_delay"] = max_val
+        self.gui.config.save_json(self.gui.config.settings_file, self.gui.config.settings)
+
+    def update_draft_setting(self):
+        self.gui.config.settings["draft_posts"] = self.draft_checkbox.isChecked()
+        self.gui.config.save_json(self.gui.config.settings_file, self.gui.config.settings)
+
+    def apply_preset(self, preset: dict):
+        self.gui.config.settings.update(preset)
+        self.gui.config.save_json(self.gui.config.settings_file, self.gui.config.settings)
+
+        self.min_delay_spin.setValue(self.gui.config.settings.get("min_delay", 5))
+        self.max_delay_spin.setValue(self.gui.config.settings.get("max_delay", 15))
+
+        ranges = self.gui.config.settings.get("interaction_ranges", {})
+        for key, (min_spin, max_spin) in self.range_spins.items():
+            vals = ranges.get(key, [0, 0])
+            min_spin.setValue(vals[0])
+            max_spin.setValue(vals[1])
+
+        self.draft_checkbox.setChecked(self.gui.config.settings.get("draft_posts", False))
+
+
+class LogsDialog(QDialog):
+    """Dialog for viewing automation logs."""
+
+    def __init__(self, gui: "AutomationGUI"):
+        super().__init__(gui)
+        self.gui = gui
+
+        self.setWindowTitle("Logs")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("📜 Automation Logs:"))
+
+        self.device_selector = QComboBox()
+        self.device_selector.currentIndexChanged.connect(self.update_log_view)
+        layout.addWidget(self.device_selector)
+
+        self.log_view = QTextEdit()
+        self.log_view.setReadOnly(True)
+        layout.addWidget(self.log_view)
+
+        refresh_btn = QPushButton("Refresh Logs")
+        refresh_btn.clicked.connect(self.load_logs)
+        layout.addWidget(refresh_btn)
+
+        self.log_timer = QTimer()
+        self.log_timer.timeout.connect(self.load_logs)
+        self.log_timer.start(5000)
+
+        self.logs_by_device = {}
+        self.load_logs()
+
+    def load_logs(self):
+        log_file = os.path.join("Logs", "automation_log.txt")
+        if not os.path.exists(log_file):
+            self.logs_by_device = {}
+            self.device_selector.clear()
+            self.device_selector.addItem("All Devices", None)
+            self.log_view.setText("No logs found.")
+            return
+
+        device_logs = {}
+        prefix_re = re.compile(r"^\[(\S+)\]")
+        suffix_re = re.compile(r"on\s+([\w-]+)\b")
+        with open(log_file, "r") as f:
+            for raw in f:
+                line = raw.strip()
+                match = prefix_re.match(line)
+                if match:
+                    device = match.group(1)
+                else:
+                    match = suffix_re.search(line)
+                    device = match.group(1) if match else "Unknown"
+                device_logs.setdefault(device, []).append(line)
+
+        self.logs_by_device = device_logs
+
+        current = self.device_selector.currentData()
+        self.device_selector.blockSignals(True)
+        self.device_selector.clear()
+        self.device_selector.addItem("All Devices", None)
+        for dev in sorted(device_logs.keys()):
+            self.device_selector.addItem(dev, dev)
+        self.device_selector.blockSignals(False)
+        if current in device_logs or current is None:
+            idx = self.device_selector.findData(current)
+            if idx != -1:
+                self.device_selector.setCurrentIndex(idx)
+        self.update_log_view()
+
+    def update_log_view(self):
+        device = self.device_selector.currentData()
+        lines = []
+        if device is None:
+            for dev_lines in self.logs_by_device.values():
+                lines.extend(dev_lines)
+        else:
+            lines = self.logs_by_device.get(device, [])
+
+        formatted = []
+        for line in lines:
+            color = "gray"
+            if "SUCCESS" in line:
+                color = "green"
+            elif "FAIL" in line or "ERROR" in line:
+                color = "red"
+            formatted.append(f'<span style="color:{color}">{line}</span>')
+
+        if formatted:
+            self.log_view.setHtml("<br>".join(formatted))
+        else:
+            self.log_view.setText("No logs for this device.")
+
+
+class StartDialog(QDialog):
+    """Dialog for launching automation and pausing/resuming."""
+
+    def __init__(self, gui: "AutomationGUI"):
+        super().__init__(gui)
+        self.gui = gui
+
+        self.setWindowTitle("Start Automation")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel("🚀 Start Automation"))
+
+        start_btn = QPushButton("Start Automation")
+        start_btn.clicked.connect(gui.run_automation)
+        layout.addWidget(start_btn)
+
+        self.pause_btn = QPushButton("Pause")
+        self.pause_btn.setCheckable(True)
+        self.pause_btn.clicked.connect(self.toggle_pause)
+        layout.addWidget(self.pause_btn)
+
+    def toggle_pause(self):
+        if self.pause_btn.isChecked():
+            self.pause_btn.setText("Resume")
+            self.gui.post_manager.pause()
+            self.gui.interaction_manager.pause()
+            self.gui.warmup_manager.pause()
+        else:
+            self.pause_btn.setText("Pause")
+            self.gui.post_manager.resume()
+            self.gui.interaction_manager.resume()
+            self.gui.warmup_manager.resume()
+
 class AutomationGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -240,7 +543,6 @@ class AutomationGUI(QMainWindow):
         self.post_manager = PostManager(self.driver, self.config)
         self.interaction_manager = InteractionManager(self.driver, self.config)
         self.session_summary = SessionSummary()
-        self.logs_by_device = {}
 
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
@@ -250,10 +552,6 @@ class AutomationGUI(QMainWindow):
 
     def init_tabs(self):
         self.devices_tab()
-        self.accounts_tab()
-        self.global_settings_tab()
-        self.logs_tab()
-        self.start_tab()
 
 
     def devices_tab(self):
@@ -428,22 +726,6 @@ class AutomationGUI(QMainWindow):
                 android_idx += 1
 
 
-    def accounts_tab(self):
-        tab = QWidget()
-        self.accounts_tab_widget = tab
-        layout = QVBoxLayout()
-
-        # Area to embed per-account settings widgets
-        self.account_settings_area = QWidget()
-        self.account_settings_area.setLayout(QVBoxLayout())
-        layout.addWidget(self.account_settings_area)
-
-        tab.setLayout(layout)
-        self.tabs.addTab(tab, "Accounts")
-
-    def load_accounts(self):
-        """Deprecated: accounts are managed via the Manage dialog."""
-        pass
 
     def choose_active_account(self, device_id, platform):
         accounts = self.config.accounts.get(device_id, {}).get(platform, {}).get("accounts", [])
@@ -453,7 +735,6 @@ class AutomationGUI(QMainWindow):
         account, ok = QInputDialog.getItem(self, f"Select Active {platform}", f"Choose account for {device_id}:", accounts, 0, False)
         if ok and account:
             self.config.set_active_account(device_id, platform, account)
-            self.load_accounts()
             for table in (self.android_table, self.iphone_table):
                 table.setRowCount(0)
             self.load_devices_ui()
@@ -466,7 +747,6 @@ class AutomationGUI(QMainWindow):
         )
         if ok and account:
             self.config.add_account(device_id, platform, account)
-            self.load_accounts()
             for table in (self.android_table, self.iphone_table):
                 table.setRowCount(0)
             self.load_devices_ui()
@@ -486,191 +766,17 @@ class AutomationGUI(QMainWindow):
         )
         if ok and account:
             self.config.remove_account(device_id, platform, account)
-            self.load_accounts()
             for table in (self.android_table, self.iphone_table):
                 table.setRowCount(0)
             self.load_devices_ui()
 
     def open_account_settings(self, device_id, platform, username):
-        """Show account settings widget within the Accounts tab."""
-        if hasattr(self, "accounts_tab_widget"):
-            idx = self.tabs.indexOf(self.accounts_tab_widget)
-            if idx != -1:
-                self.tabs.setCurrentIndex(idx)
-
-        # clear any existing settings widgets
-        layout = self.account_settings_area.layout()
-        for i in reversed(range(layout.count())):
-            item = layout.takeAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-
-        layout.addWidget(QLabel(f"Edit settings for {platform} account {username} on {device_id}"))
-
-        settings_widget = AccountSettingsWidget(username, self.config, self.warmup_manager)
-        layout.addWidget(settings_widget)
-
-        if self.warmup_manager.is_warmup_active(username):
-            layout.addWidget(QLabel("Warmup active: delay overrides are disabled."))
-
-        btn_row = QHBoxLayout()
-        save_btn = QPushButton("Save")
-        close_btn = QPushButton("Close")
-        btn_row.addWidget(save_btn)
-        btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
-
-        def save():
-            self.config.set_account_settings(username, settings_widget.get_settings())
-
-        def close():
-            for i in reversed(range(layout.count())):
-                item = layout.takeAt(i)
-                if item and item.widget():
-                    item.widget().deleteLater()
-
-        save_btn.clicked.connect(save)
-        close_btn.clicked.connect(close)
-
-        self.current_account_settings_widget = settings_widget
+        """Open :class:`AccountSettingsDialog` for the given account."""
+        dialog = AccountSettingsDialog(self, device_id, platform, username)
+        self.account_settings_dialog = dialog
+        dialog.show()
 
 
-    def global_settings_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("⚙️ Global Settings"))
-
-        self.fast_bot_mode_btn = QPushButton("Toggle Fast Bot Mode (OFF)")
-        self.fast_bot_mode_btn.setCheckable(True)
-        self.fast_bot_mode_btn.clicked.connect(self.toggle_fast_bot_mode)
-        layout.addWidget(self.fast_bot_mode_btn)
-
-        delay_layout = QHBoxLayout()
-        delay_layout.addWidget(QLabel("Min Delay (s):"))
-        self.min_delay_spin = QSpinBox()
-        self.min_delay_spin.setRange(0, 120)
-        self.min_delay_spin.setValue(self.config.settings.get("min_delay", 5))
-        self.min_delay_spin.valueChanged.connect(self.update_delay_settings)
-        delay_layout.addWidget(self.min_delay_spin)
-
-        delay_layout.addWidget(QLabel("Max Delay (s):"))
-        self.max_delay_spin = QSpinBox()
-        self.max_delay_spin.setRange(0, 120)
-        self.max_delay_spin.setValue(self.config.settings.get("max_delay", 15))
-        self.max_delay_spin.valueChanged.connect(self.update_delay_settings)
-        delay_layout.addWidget(self.max_delay_spin)
-
-        layout.addLayout(delay_layout)
-
-        preset_btn = QPushButton("Apply Slow Human Preset")
-        preset_btn.clicked.connect(lambda: self.apply_preset(SLOW_HUMAN_PRESET))
-        layout.addWidget(preset_btn)
-
-        self.range_spins = {}
-
-        def add_range(label, key, max_val):
-            row = QHBoxLayout()
-            row.addWidget(QLabel(f"{label} Min:"))
-            min_spin = QSpinBox()
-            min_spin.setRange(0, max_val)
-            current = self.config.settings.get("interaction_ranges", {}).get(key, [0, 0])
-            min_spin.setValue(current[0])
-            row.addWidget(min_spin)
-            row.addWidget(QLabel("Max:"))
-            max_spin = QSpinBox()
-            max_spin.setRange(0, max_val)
-            max_spin.setValue(current[1])
-            row.addWidget(max_spin)
-
-            def update():
-                mn = min_spin.value()
-                mx = max_spin.value()
-                if mn > mx:
-                    if self.sender() is min_spin:
-                        max_spin.setValue(mn)
-                        mx = mn
-                    else:
-                        min_spin.setValue(mx)
-                        mn = mx
-                ranges = self.config.settings.setdefault("interaction_ranges", {})
-                ranges[key] = [mn, mx]
-                self.config.save_json(self.config.settings_file, self.config.settings)
-
-            min_spin.valueChanged.connect(update)
-            max_spin.valueChanged.connect(update)
-            layout.addLayout(row)
-            self.range_spins[key] = (min_spin, max_spin)
-
-        add_range("Likes", "likes", 1000)
-        add_range("Follows", "follows", 1000)
-        add_range("Comments", "comments", 1000)
-        add_range("Shares", "shares", 1000)
-        add_range("Saves", "saves", 1000)
-        add_range("Watch Time (s)", "watch_time", 3600)
-        add_range("Scroll Duration (s)", "scroll_duration", 300)
-        add_range("Story Interactions", "story_interactions", 1000)
-        add_range("DMs", "dms", 500)
-        add_range("Daily Posts", "daily_posts", 50)
-
-        self.draft_checkbox = QCheckBox("Post from Drafts")
-        self.draft_checkbox.setChecked(self.config.settings.get("draft_posts", False))
-        self.draft_checkbox.stateChanged.connect(self.update_draft_setting)
-        layout.addWidget(self.draft_checkbox)
-
-        apply_btn = QPushButton("Apply to All Accounts")
-        apply_btn.clicked.connect(self.apply_defaults_to_all)
-        layout.addWidget(apply_btn)
-
-        apply_tiktok_btn = QPushButton("Apply to All TikTok Accounts")
-        apply_tiktok_btn.clicked.connect(lambda: self.apply_defaults_to_all({"TikTok"}))
-        layout.addWidget(apply_tiktok_btn)
-
-        apply_instagram_btn = QPushButton("Apply to All Instagram Accounts")
-        apply_instagram_btn.clicked.connect(lambda: self.apply_defaults_to_all({"Instagram"}))
-        layout.addWidget(apply_instagram_btn)
-
-        tab.setLayout(layout)
-        self.tabs.addTab(tab, "Settings")
-
-    def toggle_fast_bot_mode(self):
-        state = self.fast_bot_mode_btn.isChecked()
-        self.config.settings['fast_mode'] = state
-        self.fast_bot_mode_btn.setText(f"Toggle Fast Bot Mode ({'ON' if state else 'OFF'})")
-        self.config.save_json(self.config.settings_file, self.config.settings)
-
-    def update_delay_settings(self):
-        min_val = self.min_delay_spin.value()
-        max_val = self.max_delay_spin.value()
-        if min_val > max_val:
-            if self.sender() is self.min_delay_spin:
-                self.max_delay_spin.setValue(min_val)
-                max_val = min_val
-            else:
-                self.min_delay_spin.setValue(max_val)
-                min_val = max_val
-        self.config.settings['min_delay'] = min_val
-        self.config.settings['max_delay'] = max_val
-        self.config.save_json(self.config.settings_file, self.config.settings)
-
-    def update_draft_setting(self):
-        self.config.settings['draft_posts'] = self.draft_checkbox.isChecked()
-        self.config.save_json(self.config.settings_file, self.config.settings)
-
-    def apply_preset(self, preset: dict):
-        """Apply a configuration preset and refresh widgets."""
-        self.config.settings.update(preset)
-        self.config.save_json(self.config.settings_file, self.config.settings)
-
-        self.min_delay_spin.setValue(self.config.settings.get('min_delay', 5))
-        self.max_delay_spin.setValue(self.config.settings.get('max_delay', 15))
-
-        ranges = self.config.settings.get('interaction_ranges', {})
-        for key, (min_spin, max_spin) in self.range_spins.items():
-            vals = ranges.get(key, [0, 0])
-            min_spin.setValue(vals[0])
-            max_spin.setValue(vals[1])
-
-        self.draft_checkbox.setChecked(self.config.settings.get('draft_posts', False))
 
     def apply_defaults_to_all(self, platforms=None, show_popup=True):
         """Apply global defaults to all accounts optionally filtered by platform.
@@ -707,109 +813,6 @@ class AutomationGUI(QMainWindow):
         if applied and show_popup:
             QMessageBox.information(self, 'Defaults Applied', 'Global defaults applied to accounts without warmup.')
 
-    def logs_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("📜 Automation Logs:"))
-
-        self.device_selector = QComboBox()
-        self.device_selector.currentIndexChanged.connect(self.update_log_view)
-        layout.addWidget(self.device_selector)
-
-        self.log_view = QTextEdit()
-        self.log_view.setReadOnly(True)
-        layout.addWidget(self.log_view)
-
-        refresh_btn = QPushButton("Refresh Logs")
-        refresh_btn.clicked.connect(self.load_logs)
-        layout.addWidget(refresh_btn)
-
-        self.log_timer = QTimer()
-        self.log_timer.timeout.connect(self.load_logs)
-        self.log_timer.start(5000)
-
-        tab.setLayout(layout)
-        self.tabs.addTab(tab, "Logs")
-        self.load_logs()
-
-    def load_logs(self):
-        log_file = os.path.join("Logs", "automation_log.txt")
-        if not os.path.exists(log_file):
-            self.logs_by_device = {}
-            self.device_selector.clear()
-            self.device_selector.addItem("All Devices", None)
-            self.log_view.setText("No logs found.")
-            return
-
-        device_logs = {}
-        prefix_re = re.compile(r"^\[(\S+)\]")
-        suffix_re = re.compile(r"on\s+([\w-]+)\b")
-        with open(log_file, "r") as f:
-            for raw in f:
-                line = raw.strip()
-                match = prefix_re.match(line)
-                if match:
-                    device = match.group(1)
-                else:
-                    match = suffix_re.search(line)
-                    device = match.group(1) if match else "Unknown"
-                device_logs.setdefault(device, []).append(line)
-
-        self.logs_by_device = device_logs
-
-        current = self.device_selector.currentData()
-        self.device_selector.blockSignals(True)
-        self.device_selector.clear()
-        self.device_selector.addItem("All Devices", None)
-        for dev in sorted(device_logs.keys()):
-            self.device_selector.addItem(dev, dev)
-        self.device_selector.blockSignals(False)
-        if current in device_logs or current is None:
-            idx = self.device_selector.findData(current)
-            if idx != -1:
-                self.device_selector.setCurrentIndex(idx)
-        self.update_log_view()
-
-    def update_log_view(self):
-        device = self.device_selector.currentData()
-        lines = []
-        if device is None:
-            for dev_lines in self.logs_by_device.values():
-                lines.extend(dev_lines)
-        else:
-            lines = self.logs_by_device.get(device, [])
-
-        formatted = []
-        for line in lines:
-            color = "gray"
-            if "SUCCESS" in line:
-                color = "green"
-            elif "FAIL" in line or "ERROR" in line:
-                color = "red"
-            formatted.append(f'<span style="color:{color}">{line}</span>')
-
-        if formatted:
-            self.log_view.setHtml("<br>".join(formatted))
-        else:
-            self.log_view.setText("No logs for this device.")
-
-    def start_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("🚀 Start Automation"))
-
-        start_btn = QPushButton("Start Automation")
-        start_btn.clicked.connect(self.run_automation)
-        layout.addWidget(start_btn)
-
-        self.pause_btn = QPushButton("Pause")
-        self.pause_btn.setCheckable(True)
-        self.pause_btn.clicked.connect(self.toggle_pause)
-        layout.addWidget(self.pause_btn)
-
-        tab.setLayout(layout)
-        self.tabs.addTab(tab, "Start")
-
     def run_automation(self):
         # Apply global defaults to all accounts before starting managers
         self.apply_defaults_to_all(show_popup=False)
@@ -826,17 +829,6 @@ class AutomationGUI(QMainWindow):
         self.session_summary.show_summary()
         QMessageBox.information(self, "Session Complete", "Automation tasks have completed.")
 
-    def toggle_pause(self):
-        if self.pause_btn.isChecked():
-            self.pause_btn.setText("Resume")
-            self.post_manager.pause()
-            self.interaction_manager.pause()
-            self.warmup_manager.pause()
-        else:
-            self.pause_btn.setText("Pause")
-            self.post_manager.resume()
-            self.interaction_manager.resume()
-            self.warmup_manager.resume()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -113,19 +113,20 @@ def test_run_automation_applies_defaults(tmp_path, monkeypatch):
 def test_apply_preset_populates_gui_and_settings(tmp_path):
     gui, app = create_gui(tmp_path)
 
-    gui.apply_preset(SLOW_HUMAN_PRESET)
+    dialog = main.SettingsDialog(gui)
+    dialog.apply_preset(SLOW_HUMAN_PRESET)
 
     assert gui.config.settings["min_delay"] == SLOW_HUMAN_PRESET["min_delay"]
-    assert gui.min_delay_spin.value() == SLOW_HUMAN_PRESET["min_delay"]
+    assert dialog.min_delay_spin.value() == SLOW_HUMAN_PRESET["min_delay"]
     likes_range = SLOW_HUMAN_PRESET["interaction_ranges"]["likes"]
     stored_range = gui.config.settings["interaction_ranges"]["likes"]
-    spin_min = gui.range_spins["likes"][0].value()
-    spin_max = gui.range_spins["likes"][1].value()
+    spin_min = dialog.range_spins["likes"][0].value()
+    spin_max = dialog.range_spins["likes"][1].value()
 
     assert stored_range == likes_range
     assert spin_min == likes_range[0]
     assert spin_max == likes_range[1]
-    assert gui.draft_checkbox.isChecked() == SLOW_HUMAN_PRESET["draft_posts"]
+    assert dialog.draft_checkbox.isChecked() == SLOW_HUMAN_PRESET["draft_posts"]
 
     gui.close()
     app.quit()
