@@ -24,6 +24,8 @@ python main.py
 
 The GUI allows you to manage devices, accounts and start automation workflows. Configuration files will be created automatically in the `Config/` folder on first launch.
 
+All actions begin on the **Devices** tab where you select the target device before performing an operation. Settings, logs and automation controls open in their own windows, which you access from buttons on the main interface.
+
 ## Running Tests
 
 Basic tests for the `ConfigManager` class are provided using `pytest`. Running
