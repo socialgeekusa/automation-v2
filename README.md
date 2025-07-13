@@ -26,6 +26,25 @@ The GUI allows you to manage devices, accounts and start automation workflows. C
 
 All actions begin on the **Devices** tab where you select the target device before performing an operation. Settings, logs and automation controls open in their own windows, which you access from buttons on the main interface.
 
+## Global Settings
+
+Click the **Settings** button on the *Devices* tab to edit global interaction
+defaults. Any changes you make are written only to `Config/settings.json` – the
+existing per‑account settings files are unchanged until you push the new
+defaults.
+
+Within this dialog you can press **Apply to All Accounts** to copy the current
+defaults to every account. Two additional buttons let you limit the update to a
+single platform: **Apply to All TikTok Accounts** and **Apply to All Instagram
+Accounts**. Starting automation from the **Start Automation** window triggers the
+same update automatically, so you do not need to press the button each time.
+
+Example navigation:
+
+```
+Devices tab → Settings → Apply to All Accounts
+```
+
 ## Running Tests
 
 Basic tests for the `ConfigManager` class are provided using `pytest`. Running
