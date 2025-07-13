@@ -594,6 +594,17 @@ class AutomationGUI(QMainWindow):
         self.refresh_btn.clicked.connect(self.refresh_devices)
         layout.addWidget(self.refresh_btn)
 
+        btn_row = QHBoxLayout()
+        self.settings_btn = QPushButton("Settings")
+        self.logs_btn = QPushButton("Logs")
+        self.start_btn = QPushButton("Start Automation")
+        self.settings_btn.clicked.connect(self.open_settings_dialog)
+        self.logs_btn.clicked.connect(self.open_logs_dialog)
+        self.start_btn.clicked.connect(self.open_start_dialog)
+        for b in (self.settings_btn, self.logs_btn, self.start_btn):
+            btn_row.addWidget(b)
+        layout.addLayout(btn_row)
+
         tab.setLayout(layout)
         self.tabs.addTab(tab, "Devices")
         self.refresh_devices()
@@ -774,6 +785,24 @@ class AutomationGUI(QMainWindow):
         """Open :class:`AccountSettingsDialog` for the given account."""
         dialog = AccountSettingsDialog(self, device_id, platform, username)
         self.account_settings_dialog = dialog
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            QTimer.singleShot(0, dialog.accept)
+        dialog.exec_()
+
+    def open_settings_dialog(self):
+        dialog = SettingsDialog(self)
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            QTimer.singleShot(0, dialog.accept)
+        dialog.exec_()
+
+    def open_logs_dialog(self):
+        dialog = LogsDialog(self)
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            QTimer.singleShot(0, dialog.accept)
+        dialog.exec_()
+
+    def open_start_dialog(self):
+        dialog = StartDialog(self)
         if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
             QTimer.singleShot(0, dialog.accept)
         dialog.exec_()
