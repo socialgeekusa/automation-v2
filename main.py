@@ -262,6 +262,7 @@ class AccountSettingsDialog(QDialog):
 
     def save(self):
         self.gui.config.set_account_settings(self.username, self.settings_widget.get_settings())
+        QMessageBox.information(self, "Settings Saved", "Account settings saved.")
 
 
 class SettingsDialog(QDialog):
@@ -365,6 +366,10 @@ class SettingsDialog(QDialog):
         apply_instagram_btn.clicked.connect(lambda: gui.apply_defaults_to_all({"Instagram"}))
         layout.addWidget(apply_instagram_btn)
 
+        save_btn = QPushButton("Save Settings")
+        save_btn.clicked.connect(self.save_settings)
+        layout.addWidget(save_btn)
+
     def toggle_fast_bot_mode(self):
         state = self.fast_bot_mode_btn.isChecked()
         self.gui.config.settings["fast_mode"] = state
@@ -403,6 +408,11 @@ class SettingsDialog(QDialog):
             max_spin.setValue(vals[1])
 
         self.draft_checkbox.setChecked(self.gui.config.settings.get("draft_posts", False))
+
+    def save_settings(self):
+        """Persist global settings and show confirmation."""
+        self.gui.config.save_json(self.gui.config.settings_file, self.gui.config.settings)
+        QMessageBox.information(self, "Settings Saved", "Global settings saved.")
 
 
 class LogsDialog(QDialog):
