@@ -774,7 +774,9 @@ class AutomationGUI(QMainWindow):
         """Open :class:`AccountSettingsDialog` for the given account."""
         dialog = AccountSettingsDialog(self, device_id, platform, username)
         self.account_settings_dialog = dialog
-        dialog.show()
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            QTimer.singleShot(0, dialog.accept)
+        dialog.exec_()
 
 
 
