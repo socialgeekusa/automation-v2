@@ -9,10 +9,19 @@ This project provides a PyQt5 based interface for managing automation tasks acro
    python -m venv venv
    source venv/bin/activate
    ```
+
 2. Install the required packages:
    ```bash
    pip install -r requirements.txt
    ```
+
+## iOS Requirements
+
+For iOS automation you need the command line tools from
+[`libimobiledevice`](https://github.com/libimobiledevice/libimobiledevice)
+available in your `PATH`. This includes binaries such as `idevice_id`,
+`idevicedebug` and `idevice-app-runner`. These utilities are used to detect
+connected iOS devices and to launch apps on them.
 
 ## Launching the GUI
 
