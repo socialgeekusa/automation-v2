@@ -38,19 +38,32 @@ def test_dialog_persists_accounts(tmp_path, monkeypatch):
     app.quit()
 
 
-def test_double_click_opens_settings(tmp_path):
-    """Double clicking a username should open AccountSettingsWidget."""
+def test_double_click_opens_settings(tmp_path, monkeypatch):
+    """Double clicking a username should create an AccountSettingsDialog."""
     gui, app = create_gui(tmp_path)
     gui.config.add_device("dev1")
     gui.config.add_account("dev1", "TikTok", "user1")
+
+    created = {}
+
+    class DummyDialog:
+        def __init__(self, gui_obj, dev, plat, user):
+            created["args"] = (gui_obj, dev, plat, user)
+
+        def accept(self):
+            pass
+
+        def exec_(self):
+            pass
+
+    monkeypatch.setattr(main, "AccountSettingsDialog", DummyDialog)
 
     dialog = main.ManageDialog(gui, "dev1")
     table = dialog.tables["TikTok"]
     item = table.item(0, 0)
     table.itemDoubleClicked.emit(item)
 
-    assert isinstance(gui.account_settings_dialog, main.AccountSettingsDialog)
-    assert isinstance(gui.account_settings_dialog.settings_widget, main.AccountSettingsWidget)
+    assert created.get("args") == (gui, "dev1", "TikTok", "user1")
 
     dialog.close()
     gui.close()
